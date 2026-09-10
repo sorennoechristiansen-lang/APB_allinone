@@ -1,6 +1,7 @@
 # APB All-In-One Web v0.9d
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
+# v0.9j: Adds Industry Custom setup behavior consistent with Structure/Sector/Region: the dropdown reflects manual special values, matching presets are detected automatically, and selecting Custom setup preserves current values.
 # v0.9i: Adds synchronized sliders to Industry preferences while preserving the existing -100 to +100 soft-preference scale and preset logic.
 # v0.9h: Keeps the allocation section heading synchronized with the visible preset dropdown in every situation. Preset changes are applied in the dropdown callback before the expander heading is rendered, while Custom setup remains non-destructive.
 # v0.9g: Adds Custom setup as a real option in Structure/Sector/Region preset dropdowns. Manual allocation edits automatically switch the dropdown to Custom setup (or back to a matching preset); selecting Custom setup itself preserves the current values unchanged.
@@ -15493,15 +15494,51 @@ def _allocation_value_input(prefix, keys, item):
     )
 
 
-def _industry_slider_changed(item):
-    """Slider callback: copy the industry slider value to the canonical preference field."""
+def _matching_industry_profile(profiles, tol=1e-6):
+    """Return the matching Industry preset name, otherwise Custom setup."""
+    for name, values in profiles.items():
+        if name == "Custom setup":
+            continue
+        if all(abs(float(st.session_state.get(f"ind_{k}", 0.0) or 0.0) - float(values.get(k, 0.0) or 0.0)) <= tol
+               for k in INDUSTRY_WEB_OPTIONS):
+            return name
+    return "Custom setup"
+
+
+def _sync_industry_profile_selection(profiles):
+    """Keep the Industry dropdown aligned with the actual manual values."""
+    name=_matching_industry_profile(profiles)
+    st.session_state["industry_profile"]=name
+    return name
+
+
+def _industry_profile_dropdown_changed(profiles):
+    """Apply an Industry preset before rerender; Custom setup itself is non-destructive."""
+    selected=st.session_state.get("industry_profile")
+    if selected and selected != "Custom setup":
+        values=profiles.get(selected,{})
+        for k in INDUSTRY_WEB_OPTIONS:
+            st.session_state[f"ind_{k}"]=float(values.get(k,0.0) or 0.0)
+    st.session_state["_open_target_section"]="industry"
+
+
+def _industry_value_changed(item, profiles):
+    """Manual Industry edits make the dropdown reflect the actual setup."""
+    _sync_industry_profile_selection(profiles)
+    st.session_state["_open_target_section"]="industry"
+
+
+def _industry_slider_changed(item, profiles):
+    """Slider callback: copy the Industry slider value and sync preset/Custom setup."""
     slider_key=f"ind_{item}_slider"
     field_key=f"ind_{item}"
     value=max(-100.0,min(100.0,float(st.session_state.get(slider_key,0.0) or 0.0)))
     st.session_state[field_key]=value
+    _sync_industry_profile_selection(profiles)
+    st.session_state["_open_target_section"]="industry"
 
 
-def _industry_preference_input(item):
+def _industry_preference_input(item, profiles):
     """Render an industry preference number field and synchronized quick-adjust slider."""
     field_key=f"ind_{item}"
     slider_key=f"{field_key}_slider"
@@ -15514,6 +15551,8 @@ def _industry_preference_input(item):
         format="%.0f",
         key=field_key,
         help="0 = neutral, positive = prefer, negative = avoid/reduce preference.",
+        on_change=_industry_value_changed,
+        args=(item,profiles),
     )
 
     # The number field remains canonical; mirror it into the slider on each rerun.
@@ -15526,7 +15565,7 @@ def _industry_preference_input(item):
         key=slider_key,
         label_visibility="collapsed",
         on_change=_industry_slider_changed,
-        args=(item,),
+        args=(item,profiles),
         help=f"Drag to adjust the preference for {item}. 0 is neutral; positive values favour it and negative values reduce its preference.",
     )
 
@@ -16813,7 +16852,9 @@ def render_builder():
             with cols[i%3]:
                 _allocation_value_input("reg",region_keys,k)
 
-    industry_heading=f"Industry preferences | {st.session_state.get('industry_profile','Neutral')}"
+    if "industry_profile" not in st.session_state:
+        st.session_state["industry_profile"]=_matching_industry_profile(INDUSTRY_PREFERENCE_PROFILES)
+    industry_heading=f"Industry preferences | {st.session_state.get('industry_profile', _matching_industry_profile(INDUSTRY_PREFERENCE_PROFILES))}"
     with st.expander(industry_heading,expanded=(st.session_state.get("_open_target_section")=="industry")):
         st.caption("Industries are softer preferences rather than a 100% allocation. Zero is neutral; positive values favour an industry and negative values reduce its preference. A non-neutral preset automatically switches High priority on, but you can change it afterwards.")
         industry_profile=st.selectbox("Industry preset",list(INDUSTRY_PREFERENCE_PROFILES),index=0,key="industry_profile",on_change=_keep_target_section_open,args=("industry",))
@@ -16822,7 +16863,7 @@ def render_builder():
         cols=st.columns(3)
         for i,k in enumerate(INDUSTRY_WEB_OPTIONS):
             with cols[i%3]:
-                _industry_preference_input(k)
+                _industry_preference_input(k,INDUSTRY_PREFERENCE_PROFILES)
 
     st.caption("Tip: targets are guidance to the optimiser, not guarantees. Tight constraints can conflict with each other, especially in smaller portfolios or a limited stock universe.")
 
