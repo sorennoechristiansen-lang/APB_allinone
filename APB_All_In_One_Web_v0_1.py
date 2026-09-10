@@ -1,6 +1,7 @@
 # APB All-In-One Web v0.9d
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
+# v0.9i: Adds synchronized sliders to Industry preferences while preserving the existing -100 to +100 soft-preference scale and preset logic.
 # v0.9h: Keeps the allocation section heading synchronized with the visible preset dropdown in every situation. Preset changes are applied in the dropdown callback before the expander heading is rendered, while Custom setup remains non-destructive.
 # v0.9g: Adds Custom setup as a real option in Structure/Sector/Region preset dropdowns. Manual allocation edits automatically switch the dropdown to Custom setup (or back to a matching preset); selecting Custom setup itself preserves the current values unchanged.
 # v0.9f: Allocation expanders stay open when an edit first changes the heading from a preset to Custom setup; user collapse behavior remains unchanged afterwards.
@@ -15492,6 +15493,44 @@ def _allocation_value_input(prefix, keys, item):
     )
 
 
+def _industry_slider_changed(item):
+    """Slider callback: copy the industry slider value to the canonical preference field."""
+    slider_key=f"ind_{item}_slider"
+    field_key=f"ind_{item}"
+    value=max(-100.0,min(100.0,float(st.session_state.get(slider_key,0.0) or 0.0)))
+    st.session_state[field_key]=value
+
+
+def _industry_preference_input(item):
+    """Render an industry preference number field and synchronized quick-adjust slider."""
+    field_key=f"ind_{item}"
+    slider_key=f"{field_key}_slider"
+
+    st.number_input(
+        item,
+        min_value=-100.0,
+        max_value=100.0,
+        step=5.0,
+        format="%.0f",
+        key=field_key,
+        help="0 = neutral, positive = prefer, negative = avoid/reduce preference.",
+    )
+
+    # The number field remains canonical; mirror it into the slider on each rerun.
+    st.session_state[slider_key]=float(st.session_state.get(field_key,0.0) or 0.0)
+    st.slider(
+        f"Adjust {item}",
+        min_value=-100.0,
+        max_value=100.0,
+        step=5.0,
+        key=slider_key,
+        label_visibility="collapsed",
+        on_change=_industry_slider_changed,
+        args=(item,),
+        help=f"Drag to adjust the preference for {item}. 0 is neutral; positive values favour it and negative values reduce its preference.",
+    )
+
+
 def _normalize_allocation_100(prefix, keys):
     """Immediately normalize the full current allocation proportionally to exactly 100.0%."""
     values={k:max(0.0,float(st.session_state.get(f"{prefix}_{k}",0.0) or 0.0)) for k in keys}
@@ -16783,7 +16822,7 @@ def render_builder():
         cols=st.columns(3)
         for i,k in enumerate(INDUSTRY_WEB_OPTIONS):
             with cols[i%3]:
-                st.number_input(k,min_value=-100.0,max_value=100.0,step=5.0,format="%.0f",key=f"ind_{k}",help="0 = neutral, positive = prefer, negative = avoid/reduce preference.")
+                _industry_preference_input(k)
 
     st.caption("Tip: targets are guidance to the optimiser, not guarantees. Tight constraints can conflict with each other, especially in smaller portfolios or a limited stock universe.")
 
