@@ -1,6 +1,7 @@
 # APB All-In-One Web v0.9d
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
+# v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
 # v0.9j: Adds Industry Custom setup behavior consistent with Structure/Sector/Region: the dropdown reflects manual special values, matching presets are detected automatically, and selecting Custom setup preserves current values.
 # v0.9i: Adds synchronized sliders to Industry preferences while preserving the existing -100 to +100 soft-preference scale and preset logic.
 # v0.9h: Keeps the allocation section heading synchronized with the visible preset dropdown in every situation. Preset changes are applied in the dropdown callback before the expander heading is rendered, while Custom setup remains non-destructive.
@@ -15516,9 +15517,14 @@ def _industry_profile_dropdown_changed(profiles):
     """Apply an Industry preset before rerender; Custom setup itself is non-destructive."""
     selected=st.session_state.get("industry_profile")
     if selected and selected != "Custom setup":
-        values=profiles.get(selected,{})
-        for k in INDUSTRY_WEB_OPTIONS:
-            st.session_state[f"ind_{k}"]=float(values.get(k,0.0) or 0.0)
+        _apply_web_profile(
+            "ind",
+            selected,
+            profiles,
+            high_priority_key="industry_high_priority",
+            auto_high_priority=True,
+            all_keys=INDUSTRY_WEB_OPTIONS,
+        )
     st.session_state["_open_target_section"]="industry"
 
 
@@ -16857,8 +16863,16 @@ def render_builder():
     industry_heading=f"Industry preferences | {st.session_state.get('industry_profile', _matching_industry_profile(INDUSTRY_PREFERENCE_PROFILES))}"
     with st.expander(industry_heading,expanded=(st.session_state.get("_open_target_section")=="industry")):
         st.caption("Industries are softer preferences rather than a 100% allocation. Zero is neutral; positive values favour an industry and negative values reduce its preference. A non-neutral preset automatically switches High priority on, but you can change it afterwards.")
-        industry_profile=st.selectbox("Industry preset",list(INDUSTRY_PREFERENCE_PROFILES),index=0,key="industry_profile",on_change=_keep_target_section_open,args=("industry",))
-        _apply_web_profile("ind",industry_profile,INDUSTRY_PREFERENCE_PROFILES,high_priority_key="industry_high_priority",auto_high_priority=True,all_keys=INDUSTRY_WEB_OPTIONS)
+        industry_profile_options=list(INDUSTRY_PREFERENCE_PROFILES.keys())
+        if "Custom setup" not in industry_profile_options:
+            industry_profile_options.append("Custom setup")
+        industry_profile=st.selectbox(
+            "Industry preset",
+            industry_profile_options,
+            key="industry_profile",
+            on_change=_industry_profile_dropdown_changed,
+            args=(INDUSTRY_PREFERENCE_PROFILES,),
+        )
         st.checkbox("High priority",key="industry_high_priority",help="When selected, industry preferences receive substantially more influence in stock selection. You can switch this off even after choosing a non-neutral preset.")
         cols=st.columns(3)
         for i,k in enumerate(INDUSTRY_WEB_OPTIONS):
