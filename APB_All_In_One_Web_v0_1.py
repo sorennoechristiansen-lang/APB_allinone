@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.17
-# v0.17: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.18
+# v0.18: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -293,27 +293,27 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # Porteføljebygger v0.21
 # v0.21: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
 # Fase 2 skjuler Frekvens, Seneste udbytte og Udbyttemåned i hovedtabellen; Udbytte % og Udbytteoversigt bevares.
-# Porteføljebygger v0.17
-# v0.17: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
-# Porteføljebygger v0.17
-# v0.17: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
+# Porteføljebygger v0.18
+# v0.18: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
+# Porteføljebygger v0.18
+# v0.18: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
 # Gentaget klik skifter stigende/faldende, og aktiv kolonne markeres med ▲/▼.
-# Porteføljebygger v0.17
-# v0.17: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
+# Porteføljebygger v0.18
+# v0.18: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
 # Porteføljen genindlæses eller genopbygges ikke under udbytteopdateringen; kun udbyttefelter opdateres.
-# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.17 bevares.
-# Porteføljebygger v0.17
-# v0.17: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
+# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.18 bevares.
+# Porteføljebygger v0.18
+# v0.18: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.17
-# v0.17: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
+# Porteføljebygger v0.18
+# v0.18: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.17: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.18: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.17 bevares uændret.
+# Industripræferencerne fra v0.18 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -15091,44 +15091,64 @@ button[data-testid="stBaseButton-primary"]:hover {
 
 
 
-/* Basic money inputs: formatted text with native-looking +/- step controls. */
-.apb-money-label {
-    font-size: 14px;
-    margin-bottom: .18rem;
-    line-height: 1.25;
+/* Basic money fields: yesterday's formatted text input + inline step controls. */
+div[data-testid="stColumn"]:has([class*="st-key-portfolio_value_input"]),
+div[data-testid="stColumn"]:has([class*="st-key-minimum_position_input"]) {
+    position: relative !important;
 }
+
+/* Leave room inside the text field for the two controls. */
 [class*="st-key-portfolio_value_input"] input,
 [class*="st-key-minimum_position_input"] input {
-    height: 2.50rem !important;
-    background: #f0f2f6 !important;
-    border: 0 !important;
-    border-radius: 0.45rem !important;
-    box-shadow: none !important;
+    padding-right: 4.6rem !important;
 }
+
+/* Place the +/- widget wrappers over the right side of the text field. */
+[class*="st-key-portfolio_value_input_minus"],
+[class*="st-key-minimum_position_input_minus"] {
+    position: absolute !important;
+    right: 2.35rem !important;
+    top: 1.72rem !important;
+    z-index: 20 !important;
+    width: 2rem !important;
+}
+[class*="st-key-portfolio_value_input_plus"],
+[class*="st-key-minimum_position_input_plus"] {
+    position: absolute !important;
+    right: 0.25rem !important;
+    top: 1.72rem !important;
+    z-index: 20 !important;
+    width: 2rem !important;
+}
+
+/* Make the overlaid controls look like Streamlit's native number-input steppers. */
 [class*="st-key-portfolio_value_input_minus"] button,
 [class*="st-key-portfolio_value_input_plus"] button,
 [class*="st-key-minimum_position_input_minus"] button,
 [class*="st-key-minimum_position_input_plus"] button {
-    height: 2.50rem !important;
-    min-height: 2.50rem !important;
-    width: 100% !important;
-    min-width: 1.9rem !important;
+    width: 2rem !important;
+    min-width: 2rem !important;
+    height: 2.35rem !important;
+    min-height: 2.35rem !important;
     padding: 0 !important;
     margin: 0 !important;
-    background: #f0f2f6 !important;
     border: 0 !important;
-    border-radius: 0.45rem !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     color: #31333f !important;
     box-shadow: none !important;
     font-size: 1rem !important;
 }
+
+/* Hover highlights only while the pointer is over the control. */
 [class*="st-key-portfolio_value_input_minus"] button:hover,
 [class*="st-key-portfolio_value_input_plus"] button:hover,
 [class*="st-key-minimum_position_input_minus"] button:hover,
 [class*="st-key-minimum_position_input_plus"] button:hover {
-    background: #e4e7ec !important;
-    color: #111827 !important;
+    background: rgba(49, 51, 63, 0.08) !important;
 }
+
+/* Do not visually remember the last clicked button. */
 [class*="st-key-portfolio_value_input_minus"] button:focus:not(:hover),
 [class*="st-key-portfolio_value_input_plus"] button:focus:not(:hover),
 [class*="st-key-minimum_position_input_minus"] button:focus:not(:hover),
@@ -15137,7 +15157,7 @@ button[data-testid="stBaseButton-primary"]:hover {
 [class*="st-key-portfolio_value_input_plus"] button:active:not(:hover),
 [class*="st-key-minimum_position_input_minus"] button:active:not(:hover),
 [class*="st-key-minimum_position_input_plus"] button:active:not(:hover) {
-    background: #f0f2f6 !important;
+    background: transparent !important;
     color: #31333f !important;
     box-shadow: none !important;
     outline: none !important;
@@ -16876,46 +16896,38 @@ def admin_panel():
 
 
 def _basic_money_step(storage_key, delta):
+    """Adjust a formatted whole-money field while keeping European thousands separators."""
     value = int(round(_parse_eu_number(st.session_state.get(storage_key, "0"), 0)))
     value = max(0, value + int(delta))
     st.session_state[storage_key] = _format_eu_integer_input(value, 0)
 
 
 def _basic_money_field(label, storage_key, step, help_text):
-    """Money input styled to visually match Streamlit's native number input."""
+    """Formatted money text input with compact inline +/- controls."""
     if storage_key not in st.session_state:
         st.session_state[storage_key] = "0"
 
-    st.markdown(f"<div class='apb-money-label'>{label}</div>", unsafe_allow_html=True)
-    field_col, minus_col, plus_col = st.columns([5.9, 0.45, 0.45], gap="small")
-
-    with field_col:
-        st.text_input(
-            label,
-            key=storage_key,
-            label_visibility="collapsed",
-            help=help_text,
-            on_change=_normalize_money_widget,
-            args=(storage_key, 0),
-        )
-
-    with minus_col:
-        st.button(
-            "−",
-            key=f"{storage_key}_minus",
-            on_click=_basic_money_step,
-            args=(storage_key, -int(step)),
-            help=None,
-        )
-
-    with plus_col:
-        st.button(
-            "+",
-            key=f"{storage_key}_plus",
-            on_click=_basic_money_step,
-            args=(storage_key, int(step)),
-            help=None,
-        )
+    st.text_input(
+        label,
+        key=storage_key,
+        help=help_text,
+        on_change=_normalize_money_widget,
+        args=(storage_key, 0),
+    )
+    # Buttons are rendered normally but CSS positions them inside the field,
+    # matching the compact controls of Streamlit's native number_input.
+    st.button(
+        "−",
+        key=f"{storage_key}_minus",
+        on_click=_basic_money_step,
+        args=(storage_key, -int(step)),
+    )
+    st.button(
+        "+",
+        key=f"{storage_key}_plus",
+        on_click=_basic_money_step,
+        args=(storage_key, int(step)),
+    )
 
 
 def render_builder():
@@ -16931,12 +16943,12 @@ def render_builder():
     st.subheader("Build your portfolio")
     st.caption("Set the capital available for the portfolio, the number of different stocks and the portfolio's risk/diversification targets. APB then searches the available universe for the strongest overall fit.")
 
-    if not st.session_state.get("_basic_rules_v017_initialized",False):
+    if not st.session_state.get("_basic_rules_v018_initialized",False):
         st.session_state["currency"]="Select"
         st.session_state["portfolio_value_input"]="0"
         st.session_state["minimum_position_input"]="0"
         st.session_state["maximum_stocks"]=0
-        st.session_state["_basic_rules_v017_initialized"]=True
+        st.session_state["_basic_rules_v018_initialized"]=True
 
     # First-use basic rules deliberately start unselected/at zero so a portfolio
     # cannot be built accidentally from hidden defaults. Numeric fields and sliders
