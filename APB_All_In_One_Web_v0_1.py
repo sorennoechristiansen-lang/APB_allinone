@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.22
-# v0.22: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.23
+# v0.23: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -290,30 +290,30 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # v0.23: Fase 0 viser de bagvedliggende analyse-/byggedata efter Industri. Fase 2 udfylder Regionscore, Sektorscore og Industriscore ud fra den færdigbyggede portefølje.
 # Aktiens historik opdateres permanent for hele aktieuniverset og bevares uafhængigt af aktieunivers.json; historikken kan ikke slettes fra brugerfladen.
 # Fase 1 får den valgfri, bløde prioritering Kursmålstrend baseret på de to seneste reelle Bear/Base/Bull-kursmål (25/50/25). Manglende historik behandles neutralt.
-# Porteføljebygger v0.22
-# v0.22: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
+# Porteføljebygger v0.23
+# v0.23: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
 # Fase 2 skjuler Frekvens, Seneste udbytte og Udbyttemåned i hovedtabellen; Udbytte % og Udbytteoversigt bevares.
-# Porteføljebygger v0.22
-# v0.22: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
-# Porteføljebygger v0.22
-# v0.22: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
+# Porteføljebygger v0.23
+# v0.23: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
+# Porteføljebygger v0.23
+# v0.23: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
 # Gentaget klik skifter stigende/faldende, og aktiv kolonne markeres med ▲/▼.
-# Porteføljebygger v0.22
-# v0.22: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
+# Porteføljebygger v0.23
+# v0.23: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
 # Porteføljen genindlæses eller genopbygges ikke under udbytteopdateringen; kun udbyttefelter opdateres.
-# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.22 bevares.
-# Porteføljebygger v0.22
-# v0.22: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
+# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.23 bevares.
+# Porteføljebygger v0.23
+# v0.23: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.22
-# v0.22: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
+# Porteføljebygger v0.23
+# v0.23: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.22: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.23: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.22 bevares uændret.
+# Industripræferencerne fra v0.23 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -16544,7 +16544,7 @@ def _build_portfolio_pdf(result):
         ['Portfolio value',f"{_money(total)} {ccy}",'Positions',str(len(positions)),'Engine score',_fmt((result.get('engine',{}) or {}).get('score'),1)],
         ['Cash',f"{_money(cash)} {ccy}",'Currency',str(ccy),'',''],
         ['Weighted Bear 1Y',_pct(weighted('bear_1y_pct'),1),'Weighted Base 1Y',_pct(weighted('base_1y_pct'),1),'Weighted Bull 1Y',_pct(weighted('bull_1y_pct'),1)],
-        ['Weighted dividend yield',_pct(weighted('dividend_yield_pct'),2),'Dividend target',(_pct(((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('target_pct'),1) if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else 'Off'),'Dividend priority',(('High' if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('high_priority') else 'Normal') if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else '–')],
+        [Paragraph('Weighted dividend<br/>yield', ParagraphStyle('APBSummaryLabel', parent=small, fontName='Helvetica-Bold', fontSize=8.5, leading=9.2, textColor=colors.black, spaceAfter=0)),_pct(weighted('dividend_yield_pct'),2),'Dividend target',(_pct(((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('target_pct'),1) if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else 'Off'),'Dividend priority',(('High' if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('high_priority') else 'Normal') if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else '–')],
     ]
     t=Table(summary,colWidths=[31*mm,31*mm,31*mm,31*mm,31*mm,31*mm])
     t.setStyle(TableStyle([
@@ -16664,7 +16664,7 @@ def show_result(result):
     weighted=lambda field: (sum(_safe(p.get("position_value"))*_safe(p.get(field)) for p in positions)/denom) if denom else None
     c1,c2,c3=st.columns(3)
     with c1:_card("Portfolio value",f"{_money(total)} {ccy}",f"{len(positions)} positions")
-    with c2:_card("Cash",f"{_money(portfolio.get('cash',{}).get('amount'))} {ccy}","")
+    with c2:_card("Cash",f"{_money(portfolio.get('cash',{}).get('amount'))} {ccy}","Uninvested balance")
     with c3:_card("Engine score",_fmt(result.get("engine",{}).get("score"),1),"Portfolio optimisation")
     s1,s2,s3,s4=st.columns(4)
     with s1:_card("Weighted Bear 1Y",_pct(weighted("bear_1y_pct"),1),"Analyst bear case")
