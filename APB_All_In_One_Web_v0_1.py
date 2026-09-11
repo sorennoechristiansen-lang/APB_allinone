@@ -1,4 +1,5 @@
-# APB All-In-One Web v0.26
+# APB All-In-One Web v0.27
+# v0.27: When capital and minimum-position constraints leave no optimisation room, offers Build portfolio anyway, reduces the requested stock count by 20% to a whole number, updates the visible field and continues the build.
 # v0.26: Adds a permanent neutral Skool community link below the login form, suitable for both existing members and public test users.
 # APB All-In-One Web v0.25
 # v0.25: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
@@ -16970,6 +16971,13 @@ def render_builder():
         st.session_state["maximum_stocks"]=0
         st.session_state["_basic_rules_v018_initialized"]=True
 
+    # A confirmed automatic reduction is applied before the number_input widget
+    # is instantiated. Streamlit does not allow changing a widget's session-state
+    # value after that widget has already been rendered in the same run.
+    deferred_stock_count=st.session_state.pop("_apply_reduced_stock_count",None)
+    if deferred_stock_count is not None:
+        st.session_state["maximum_stocks"]=max(1,int(_safe(deferred_stock_count,1)))
+
     # First-use basic rules deliberately start unselected/at zero so a portfolio
     # cannot be built accidentally from hidden defaults. Numeric fields and sliders
     # are synchronized in both directions.
@@ -17147,7 +17155,39 @@ def render_builder():
             quota_blocked=True
             st.warning("Build availability could not be verified at the moment. Please try again shortly.")
 
-    if st.button("BUILD PORTFOLIO",type="primary",use_container_width=True,disabled=quota_blocked):
+    # If the selected number of stocks and minimum position consume all (or more)
+    # available capital, APB can reduce the stock count by 20% and continue.
+    pending_reduction=st.session_state.get("_stock_count_reduction_prompt")
+    if isinstance(pending_reduction,dict):
+        old_count=max(1,int(_safe(pending_reduction.get("stock_count"),1)))
+        new_count=max(1,int(_safe(pending_reduction.get("reduced_stock_count"),max(1,int(old_count*0.8)))))
+        req=_safe(pending_reduction.get("required_capital"),0.0)
+        cap=_safe(pending_reduction.get("capital"),0.0)
+        cur=str(pending_reduction.get("currency") or st.session_state.get("currency",""))
+        st.warning(
+            "The selected settings leave too little room for portfolio optimisation.\n\n"
+            f"{old_count} stocks × minimum per stock requires {_money(req)} {cur} "
+            f"of the available {_money(cap)} {cur}.\n\n"
+            f"Build portfolio anyway? The number of stocks will automatically be reduced by 20% "
+            f"from {old_count} to {new_count} to give the optimiser more flexibility."
+        )
+        cancel_col,build_anyway_col=st.columns([1,2])
+        with cancel_col:
+            if st.button("CANCEL",use_container_width=True,key="cancel_stock_count_reduction"):
+                st.session_state.pop("_stock_count_reduction_prompt",None)
+                st.rerun()
+        with build_anyway_col:
+            if st.button("BUILD PORTFOLIO ANYWAY",type="primary",use_container_width=True,key="confirm_stock_count_reduction"):
+                st.session_state["_apply_reduced_stock_count"]=new_count
+                st.session_state["_build_after_stock_reduction"]=True
+                st.session_state.pop("_stock_count_reduction_prompt",None)
+                st.rerun()
+
+    build_button_clicked=st.button("BUILD PORTFOLIO",type="primary",use_container_width=True,disabled=quota_blocked)
+    continue_after_reduction=bool(st.session_state.pop("_build_after_stock_reduction",False))
+    build_requested=bool(build_button_clicked or continue_after_reduction)
+
+    if build_requested:
         basic_errors=[]
         currency=st.session_state.get("currency","Select")
         capital=_parse_eu_number(st.session_state.get("portfolio_value_input",0),0.0)
@@ -17163,14 +17203,24 @@ def render_builder():
             basic_errors.append("Number of different stocks must be greater than 0.")
         if capital>0 and minimum_position>capital:
             basic_errors.append("Minimum per stock cannot be greater than the total capital available.")
-        if capital>0 and minimum_position>0 and stock_count>0 and minimum_position*stock_count>capital:
-            basic_errors.append(
-                f"{stock_count} stocks × minimum per stock requires at least {_money(minimum_position*stock_count)} {currency}, "
-                f"but only {_money(capital)} {currency} is available."
-            )
         if basic_errors:
             st.error("Portfolio cannot be built yet:\n\n"+"\n".join(f"• {x}" for x in basic_errors))
             st.stop()
+
+        # Equality is intentionally included: if every requested position receives
+        # exactly the minimum, the optimiser has no capital left to distribute.
+        if capital>0 and minimum_position>0 and stock_count>0 and minimum_position*stock_count>=capital:
+            reduced_stock_count=max(1,int(stock_count*0.8))
+            if reduced_stock_count>=stock_count and stock_count>1:
+                reduced_stock_count=stock_count-1
+            st.session_state["_stock_count_reduction_prompt"]={
+                "stock_count":stock_count,
+                "reduced_stock_count":reduced_stock_count,
+                "required_capital":minimum_position*stock_count,
+                "capital":capital,
+                "currency":currency,
+            }
+            st.rerun()
 
         invalid_allocations=_invalid_required_allocations()
         if invalid_allocations:
