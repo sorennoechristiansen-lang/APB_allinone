@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.13
-# v0.13: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.14
+# v0.14: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -306,14 +306,14 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # v0.14: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.13
-# v0.13: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
+# Porteføljebygger v0.14
+# v0.14: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.13: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.14: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.13 bevares uændret.
+# Industripræferencerne fra v0.14 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -15089,6 +15089,61 @@ button[data-testid="stBaseButton-primary"]:hover {
     color:#fff !important;
 }
 
+
+/* Basic rules: compact +/- controls for formatted money fields. */
+.apb-basic-label {
+    font-size:14px;
+    margin-bottom:.22rem;
+    line-height:1.25;
+}
+[class*="st-key-portfolio_value_input_minus"] button,
+[class*="st-key-portfolio_value_input_plus"] button,
+[class*="st-key-minimum_position_input_minus"] button,
+[class*="st-key-minimum_position_input_plus"] button {
+    width:2.15rem !important;
+    min-width:2.15rem !important;
+    height:2.40rem !important;
+    min-height:2.40rem !important;
+    padding:0 !important;
+    margin:0 !important;
+    border:1px solid #d6d9de !important;
+    border-radius:6px !important;
+    background:#ffffff !important;
+    color:#31333f !important;
+    box-shadow:none !important;
+    font-size:1rem !important;
+}
+[class*="st-key-portfolio_value_input_minus"] button:hover,
+[class*="st-key-portfolio_value_input_plus"] button:hover,
+[class*="st-key-minimum_position_input_minus"] button:hover,
+[class*="st-key-minimum_position_input_plus"] button:hover {
+    background:#f0f6ff !important;
+    border-color:#1565c0 !important;
+    color:#1565c0 !important;
+}
+/* A click must not leave the last +/- control visually selected. */
+[class*="st-key-portfolio_value_input_minus"] button:focus:not(:hover),
+[class*="st-key-portfolio_value_input_plus"] button:focus:not(:hover),
+[class*="st-key-minimum_position_input_minus"] button:focus:not(:hover),
+[class*="st-key-minimum_position_input_plus"] button:focus:not(:hover),
+[class*="st-key-portfolio_value_input_minus"] button:active:not(:hover),
+[class*="st-key-portfolio_value_input_plus"] button:active:not(:hover),
+[class*="st-key-minimum_position_input_minus"] button:active:not(:hover),
+[class*="st-key-minimum_position_input_plus"] button:active:not(:hover) {
+    background:#ffffff !important;
+    border-color:#d6d9de !important;
+    color:#31333f !important;
+    box-shadow:none !important;
+    outline:none !important;
+}
+/* Same non-sticky focus behaviour for the native stock-count stepper. */
+div[data-testid="stNumberInput"] button:focus:not(:hover),
+div[data-testid="stNumberInput"] button:active:not(:hover) {
+    background:transparent !important;
+    box-shadow:none !important;
+    outline:none !important;
+}
+
 .apb-account-card {
     margin-top:.55rem;
     margin-bottom:.45rem;
@@ -16812,11 +16867,48 @@ def admin_panel():
 
 
 
-def _sync_basic_native_money_input(widget_key, storage_key):
-    """Keep APB's formatted money state aligned with Streamlit's native number input."""
-    value=st.session_state.get(widget_key,0)
-    value=max(0,int(value or 0))
+def _step_basic_money(storage_key, delta):
+    """Step a formatted whole-money field without imposing an upper limit."""
+    value=int(round(_parse_eu_number(st.session_state.get(storage_key,"0"),0)))
+    value=max(0,value+int(delta))
     st.session_state[storage_key]=_format_eu_integer_input(value,0)
+
+
+def _compact_money_input(label, storage_key, step, help_text):
+    """Compact formatted money field with small +/- controls."""
+    if storage_key not in st.session_state:
+        st.session_state[storage_key]="0"
+
+    st.markdown(
+        f"<div class='apb-basic-label'>{label}</div>",
+        unsafe_allow_html=True,
+    )
+    value_col, minus_col, plus_col=st.columns([4.8,0.52,0.52],gap="small")
+    with value_col:
+        st.text_input(
+            label,
+            key=storage_key,
+            label_visibility="collapsed",
+            help=help_text,
+            on_change=_normalize_money_widget,
+            args=(storage_key,0),
+        )
+    with minus_col:
+        st.button(
+            "−",
+            key=f"{storage_key}_minus",
+            on_click=_step_basic_money,
+            args=(storage_key,-int(step)),
+            help=None,
+        )
+    with plus_col:
+        st.button(
+            "+",
+            key=f"{storage_key}_plus",
+            on_click=_step_basic_money,
+            args=(storage_key,int(step)),
+            help=None,
+        )
 
 
 def render_builder():
@@ -16832,14 +16924,12 @@ def render_builder():
     st.subheader("Build your portfolio")
     st.caption("Set the capital available for the portfolio, the number of different stocks and the portfolio's risk/diversification targets. APB then searches the available universe for the strongest overall fit.")
 
-    if not st.session_state.get("_basic_rules_v013_initialized",False):
+    if not st.session_state.get("_basic_rules_v014_initialized",False):
         st.session_state["currency"]="Select"
         st.session_state["portfolio_value_input"]="0"
         st.session_state["minimum_position_input"]="0"
-        st.session_state["portfolio_value_input_number"]=0
-        st.session_state["minimum_position_input_number"]=0
         st.session_state["maximum_stocks"]=0
-        st.session_state["_basic_rules_v013_initialized"]=True
+        st.session_state["_basic_rules_v014_initialized"]=True
 
     # First-use basic rules deliberately start unselected/at zero so a portfolio
     # cannot be built accidentally from hidden defaults. Numeric fields and sliders
@@ -16859,24 +16949,18 @@ def render_builder():
     selected_currency=st.session_state.get("currency") or "Select"
     currency_label=selected_currency if selected_currency in SUPPORTED_PORTFOLIO_CURRENCIES else "currency"
     with top2:
-        st.number_input(
+        _compact_money_input(
             f"Capital available ({currency_label})",
-            min_value=0,
-            step=10_000,
-            key="portfolio_value_input_number",
-            help="The total amount APB may use when constructing the portfolio.",
-            on_change=_sync_basic_native_money_input,
-            args=("portfolio_value_input_number","portfolio_value_input"),
+            "portfolio_value_input",
+            10_000,
+            "The total amount APB may use when constructing the portfolio.",
         )
     with top3:
-        st.number_input(
+        _compact_money_input(
             f"Minimum per stock ({currency_label})",
-            min_value=0,
-            step=1_000,
-            key="minimum_position_input_number",
-            help="The smallest amount APB may allocate to one stock position.",
-            on_change=_sync_basic_native_money_input,
-            args=("minimum_position_input_number","minimum_position_input"),
+            "minimum_position_input",
+            1_000,
+            "The smallest amount APB may allocate to one stock position.",
         )
     with top4:
         st.number_input(
