@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.15
-# v0.15: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.16
+# v0.16: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -298,22 +298,22 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # Porteføljebygger v0.16
 # v0.16: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
 # Gentaget klik skifter stigende/faldende, og aktiv kolonne markeres med ▲/▼.
-# Porteføljebygger v0.15
-# v0.15: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
+# Porteføljebygger v0.16
+# v0.16: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
 # Porteføljen genindlæses eller genopbygges ikke under udbytteopdateringen; kun udbyttefelter opdateres.
-# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.15 bevares.
-# Porteføljebygger v0.15
-# v0.15: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
+# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.16 bevares.
+# Porteføljebygger v0.16
+# v0.16: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.15
-# v0.15: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
+# Porteføljebygger v0.16
+# v0.16: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.15: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.16: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.15 bevares uændret.
+# Industripræferencerne fra v0.16 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -16821,38 +16821,6 @@ def admin_panel():
 
 
 
-def _basic_money_overlay_css(widget_key, value):
-    """Show EU thousands separators over a native number_input when it is not being edited."""
-    formatted=_format_eu_integer_input(int(value or 0),0)
-    safe=formatted.replace("\\","\\\\").replace('"','\\"')
-    return f"""
-<style>
-[class*="st-key-{widget_key}"] div[data-baseweb="input"] {{
-    position:relative;
-}}
-[class*="st-key-{widget_key}"] div[data-baseweb="input"]::before {{
-    content:"{safe}";
-    position:absolute;
-    left:0.75rem;
-    top:50%;
-    transform:translateY(-50%);
-    z-index:2;
-    pointer-events:none;
-    color:#31333f;
-    font:inherit;
-    line-height:1;
-}}
-[class*="st-key-{widget_key}"] input:not(:focus) {{
-    color:transparent !important;
-    caret-color:transparent !important;
-}}
-[class*="st-key-{widget_key}"] div[data-baseweb="input"]:has(input:focus)::before {{
-    display:none;
-}}
-</style>
-"""
-
-
 def render_builder():
     if st.session_state.get("result_data") is not None:
         if st.button("← Build another portfolio"):
@@ -16898,6 +16866,7 @@ def render_builder():
             key="portfolio_value_input_number",
             help="The total amount APB may use when constructing the portfolio.",
         )
+        st.caption(_format_eu_integer_input(st.session_state.get("portfolio_value_input_number",0),0))
     with top3:
         st.number_input(
             f"Minimum per stock ({currency_label})",
@@ -16906,6 +16875,7 @@ def render_builder():
             key="minimum_position_input_number",
             help="The smallest amount APB may allocate to one stock position.",
         )
+        st.caption(_format_eu_integer_input(st.session_state.get("minimum_position_input_number",0),0))
     with top4:
         st.number_input(
             "Number of different stocks (typical 10–50)",
@@ -16914,14 +16884,6 @@ def render_builder():
             key="maximum_stocks",
             help="APB builds the portfolio using this number of different stocks, provided the selected rules can be satisfied. 10–50 is a typical range, not a limit.",
         )
-
-    # Native Streamlit number inputs keep the compact +/- controls.
-    # The two money fields are visually overlaid with EU thousands separators when not being edited.
-    st.markdown(
-        _basic_money_overlay_css("portfolio_value_input_number", st.session_state.get("portfolio_value_input_number",0))
-        + _basic_money_overlay_css("minimum_position_input_number", st.session_state.get("minimum_position_input_number",0)),
-        unsafe_allow_html=True,
-    )
 
     st.info("The profiles below are ready-made starting points. Choose a preset, then change any individual value if you want. High priority gives that target group much more influence in the optimisation.")
 
