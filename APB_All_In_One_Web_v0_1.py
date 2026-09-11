@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.12
-# v0.12: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.13
+# v0.13: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -306,14 +306,14 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # v0.14: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.12
+# Porteføljebygger v0.13
 # v0.13: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.12: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.13: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.12 bevares uændret.
+# Industripræferencerne fra v0.13 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -15769,38 +15769,47 @@ def _normalize_money_widget(key, default):
     st.session_state[key] = _format_eu_integer_input(st.session_state.get(key, default), default)
 
 
-def _step_money_input(key, delta):
-    """Change a money field by delta while keeping EU thousands formatting."""
-    current = int(round(_parse_eu_number(st.session_state.get(key, "0"), 0)))
-    current = max(0, current + int(delta))
-    st.session_state[key] = _format_eu_integer_input(current, 0)
+def _sync_basic_number_to_slider(number_key, slider_key, maximum, integer=True, money=False):
+    raw=st.session_state.get(number_key,0)
+    value=_parse_eu_number(raw,0.0) if money else _safe(raw,0.0)
+    value=max(0.0,min(float(maximum),value))
+    if integer:
+        value=int(round(value))
+    st.session_state[slider_key]=value
+    if money:
+        st.session_state[number_key]=_format_eu_integer_input(value,0)
 
 
-def _money_step_input(label, key, step, help_text):
-    """Unrestricted whole-number money input with explicit minus/plus buttons."""
+def _sync_basic_slider_to_number(slider_key, number_key, integer=True, money=False):
+    value=_safe(st.session_state.get(slider_key,0),0.0)
+    value=int(round(value)) if integer else float(value)
+    st.session_state[number_key]=_format_eu_integer_input(value,0) if money else value
+
+
+def _basic_number_with_slider(label,key,maximum,step,help_text,money=False):
+    slider_key=f"{key}_slider"
     if key not in st.session_state:
-        st.session_state[key] = "0"
-
-    st.markdown(f"<div style='font-size:14px; margin-bottom:0.25rem;'>{label}</div>", unsafe_allow_html=True)
-    minus_col, input_col, plus_col = st.columns([0.55, 3.2, 0.55], gap="small")
-    with minus_col:
-        st.button("−", key=f"{key}_minus", use_container_width=True,
-                  on_click=_step_money_input, args=(key, -int(step)),
-                  help=f"Decrease by {_format_eu_integer_input(step)}")
-    with input_col:
+        st.session_state[key]="0" if money else 0
+    if slider_key not in st.session_state:
+        raw=st.session_state.get(key,0)
+        parsed=_parse_eu_number(raw,0.0) if money else _safe(raw,0.0)
+        st.session_state[slider_key]=int(round(parsed))
+    if money:
         st.text_input(
-            label,
-            key=key,
-            label_visibility="collapsed",
-            help=help_text,
-            on_change=_normalize_money_widget,
-            args=(key, 0),
+            label,key=key,help=help_text,
+            on_change=_sync_basic_number_to_slider,args=(key,slider_key,maximum,True,True),
         )
-    with plus_col:
-        st.button("+", key=f"{key}_plus", use_container_width=True,
-                  on_click=_step_money_input, args=(key, int(step)),
-                  help=f"Increase by {_format_eu_integer_input(step)}")
-
+    else:
+        st.number_input(
+            label,min_value=0,max_value=int(maximum),step=int(step),key=key,
+            help=help_text,
+            on_change=_sync_basic_number_to_slider,args=(key,slider_key,maximum,True,False),
+        )
+    st.slider(
+        f"{label} slider",min_value=0,max_value=int(maximum),step=int(step),key=slider_key,
+        label_visibility="collapsed",
+        on_change=_sync_basic_slider_to_number,args=(slider_key,key,True,money),
+    )
 
 def _sync_dividend_number_to_slider():
     st.session_state["dividend_target_slider"]=float(_safe(st.session_state.get("dividend_target_pct",3.0),3.0))
@@ -16802,6 +16811,14 @@ def admin_panel():
                 st.warning(f"{filename}: {error}")
 
 
+
+def _sync_basic_native_money_input(widget_key, storage_key):
+    """Keep APB's formatted money state aligned with Streamlit's native number input."""
+    value=st.session_state.get(widget_key,0)
+    value=max(0,int(value or 0))
+    st.session_state[storage_key]=_format_eu_integer_input(value,0)
+
+
 def render_builder():
     if st.session_state.get("result_data") is not None:
         if st.button("← Build another portfolio"):
@@ -16815,16 +16832,18 @@ def render_builder():
     st.subheader("Build your portfolio")
     st.caption("Set the capital available for the portfolio, the number of different stocks and the portfolio's risk/diversification targets. APB then searches the available universe for the strongest overall fit.")
 
-    if not st.session_state.get("_basic_rules_v012_initialized",False):
+    if not st.session_state.get("_basic_rules_v013_initialized",False):
         st.session_state["currency"]="Select"
         st.session_state["portfolio_value_input"]="0"
         st.session_state["minimum_position_input"]="0"
+        st.session_state["portfolio_value_input_number"]=0
+        st.session_state["minimum_position_input_number"]=0
         st.session_state["maximum_stocks"]=0
-        st.session_state["_basic_rules_v012_initialized"]=True
+        st.session_state["_basic_rules_v013_initialized"]=True
 
     # First-use basic rules deliberately start unselected/at zero so a portfolio
-    # cannot be built accidentally from hidden defaults. Money fields are unrestricted
-    # whole-number inputs with +/- step buttons; stock count is an unrestricted integer.
+    # cannot be built accidentally from hidden defaults. Numeric fields and sliders
+    # are synchronized in both directions.
     if st.session_state.get("currency") not in ("Select","DKK","EUR","USD"):
         st.session_state["currency"]="Select"
 
@@ -16840,14 +16859,24 @@ def render_builder():
     selected_currency=st.session_state.get("currency") or "Select"
     currency_label=selected_currency if selected_currency in SUPPORTED_PORTFOLIO_CURRENCIES else "currency"
     with top2:
-        _money_step_input(
-            f"Capital available ({currency_label})","portfolio_value_input",10_000,
-            "The total amount APB may use when constructing the portfolio. Use −/+ in steps of 10,000 or enter any whole amount manually.",
+        st.number_input(
+            f"Capital available ({currency_label})",
+            min_value=0,
+            step=10_000,
+            key="portfolio_value_input_number",
+            help="The total amount APB may use when constructing the portfolio.",
+            on_change=_sync_basic_native_money_input,
+            args=("portfolio_value_input_number","portfolio_value_input"),
         )
     with top3:
-        _money_step_input(
-            f"Minimum per stock ({currency_label})","minimum_position_input",1_000,
-            "The smallest amount APB may allocate to one stock position. Use −/+ in steps of 1,000 or enter any whole amount manually.",
+        st.number_input(
+            f"Minimum per stock ({currency_label})",
+            min_value=0,
+            step=1_000,
+            key="minimum_position_input_number",
+            help="The smallest amount APB may allocate to one stock position.",
+            on_change=_sync_basic_native_money_input,
+            args=("minimum_position_input_number","minimum_position_input"),
         )
     with top4:
         st.number_input(
