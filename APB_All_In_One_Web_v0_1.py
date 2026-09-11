@@ -15006,6 +15006,7 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Alpha Portfolio Builder", page_icon="📈", layout="wide")
 st.markdown("""
@@ -16484,6 +16485,57 @@ def login_screen():
             login_nonce=int(st.session_state.get("login_nonce",0) or 0)
             username=st.text_input("Username",key=f"login_username_{login_nonce}")
             password=st.text_input("Password",type="password",key=f"login_password_{login_nonce}")
+
+            # Browser password managers can visually autofill Streamlit inputs without
+            # firing the DOM input/change events that Streamlit needs to update its
+            # server-side widget state. The small hidden component below watches the
+            # actual parent-page login inputs and re-dispatches those events whenever
+            # autofill changes their DOM values. This is especially important after
+            # an in-app logout, where no full browser navigation occurs.
+            components.html(
+                r"""
+<script>
+(function () {
+  function syncLoginFields() {
+    try {
+      const win = window.parent;
+      const doc = win.document;
+      const user = doc.querySelector('input[aria-label="Username"]');
+      const pass = doc.querySelector('input[aria-label="Password"]');
+      if (!win.__apbAutofillSynced) {
+        win.__apbAutofillSynced = { username: "", password: "" };
+      }
+
+      [[user, "username"], [pass, "password"]].forEach(function (pair) {
+        const el = pair[0];
+        const key = pair[1];
+        if (!el) return;
+        const value = el.value || "";
+        // Ignore normal empty fields. Only a real value needs autofill repair.
+        if (!value || win.__apbAutofillSynced[key] === value) return;
+        win.__apbAutofillSynced[key] = value;
+
+        // Re-emit the browser-filled value through the events Streamlit listens for.
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    } catch (e) {}
+  }
+
+  // Password managers may fill immediately or a few seconds after a selection.
+  // Polling avoids permanent event listeners on Streamlit's parent document.
+  let runs = 0;
+  const timer = setInterval(function () {
+    syncLoginFields();
+    runs += 1;
+    if (runs >= 150) clearInterval(timer);
+  }, 200);
+})();
+</script>
+                """,
+                height=0,
+            )
+
             if st.button("LOG IN",type="primary",use_container_width=True):
                 entered=str(username or "").strip()
 
