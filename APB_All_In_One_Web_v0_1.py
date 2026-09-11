@@ -1,3 +1,5 @@
+# APB All-In-One Web v0.26
+# v0.26: Adds a permanent neutral Skool community link below the login form, suitable for both existing members and public test users.
 # APB All-In-One Web v0.25
 # v0.25: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
@@ -16498,6 +16500,17 @@ def login_screen():
                         st.session_state.auth_tier=str(entry.get("tier","Standard"))
                         st.session_state.pop("_open_target_section",None)
                         st.rerun()
+
+            st.divider()
+            st.markdown("**Alpha Portfolio Builder Community**")
+            st.caption(
+                "Visit the Skool community for access information, updates, guides and discussions."
+            )
+            st.link_button(
+                "OPEN COMMUNITY →",
+                "https://www.skool.com/alpha-portfolio-builder-8372/about",
+                use_container_width=True,
+            )
 
     _render_disclaimer()
 
