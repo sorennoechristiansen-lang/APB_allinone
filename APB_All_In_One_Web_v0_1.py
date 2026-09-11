@@ -1,4 +1,5 @@
-# APB All-In-One Web v0.28
+# APB All-In-One Web v0.29
+# v0.29: Built portfolio now expands vertically to show every position at once instead of capping the table height and requiring vertical scrolling.
 # v0.28: Fixes European money parsing for values with multiple thousands separators such as 1.000.000, so capital is no longer interpreted as zero.
 # v0.27: When capital and minimum-position constraints leave no optimisation room, offers Build portfolio anyway, reduces the requested stock count by 20% to a whole number, updates the visible field and continues the build.
 # v0.26: Adds a permanent neutral Skool community link below the login form, suitable for both existing members and public test users.
@@ -16705,7 +16706,7 @@ def show_result(result):
     sorted_positions=sorted(positions,key=lambda x:_safe(x.get("portfolio_weight_pct")),reverse=True)
     for position_no,p in enumerate(sorted_positions,start=1):
         rows.append({"#":position_no,"Name":p.get("name"),"Ticker":p.get("ticker"),"Exchange":p.get("exchange"),"Shares":_fmt(p.get("shares"),0),"Value":f"{_money(p.get('position_value'))} {ccy}","%PF":_pct(p.get("portfolio_weight_pct"),1),"Structure":_display_structure(p.get("structure_layer")),"Sector":_display_sector(p.get("sector")),"Dividend %":_pct(p.get("dividend_yield_pct"),2),"Bear 1Y":_pct(p.get("bear_1y_pct"),1),"Base 1Y":_pct(p.get("base_1y_pct"),1),"Bull 1Y":_pct(p.get("bull_1y_pct"),1)})
-    st.dataframe(pd.DataFrame(rows),use_container_width=True,height=min(700,100+35*max(1,len(rows))),hide_index=True)
+    st.dataframe(pd.DataFrame(rows),use_container_width=True,height=38+35*max(1,len(rows)),hide_index=True)
     tabs=st.tabs(["Structure","Sectors","Regions","Input / Results"])
     explanations={
         "structure_layers":"Structure layers are the portfolio's risk architecture. The target mix is especially important because it determines how much of the portfolio is allocated to lower- versus higher-risk company profiles.",
