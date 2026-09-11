@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.23
-# v0.23: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.24
+# v0.24: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -284,36 +284,36 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # v0.25: Fase 2 får knappen Aktiens historik for den markerede aktie. Historikvinduet i Porteføljebyggeren viser kun kursmålsændringer og regnskaber (ingen køb/salg), samt de to tidsseriegrafer med hover.
 # Fase 3 får fanen Kursmålsanalyse samlet som i Porteføljesimulatoren: gennemsnitlige Bear/Base/Bull-kursmål absolut i DKK og procentuelt, samt diskret gennemsnitlig kursudvikling for den aktuelt byggede portefølje.
 # Porteføljebygger v0.24
-# v0.24: Retter langsom/blokerende opstart fra v0.23. GUI vises før cache-genopbygning, og Fase 0-preview genbruger én indlæst historik uden at skrive kursmål/regnskabsbegivenheder pr. aktie.
+# v0.24: Retter langsom/blokerende opstart fra v0.24. GUI vises før cache-genopbygning, og Fase 0-preview genbruger én indlæst historik uden at skrive kursmål/regnskabsbegivenheder pr. aktie.
 # Opstartsstatus forklarer tydeligt, når gemte data og senest byggede portefølje gendannes.
-# Porteføljebygger v0.23
-# v0.23: Fase 0 viser de bagvedliggende analyse-/byggedata efter Industri. Fase 2 udfylder Regionscore, Sektorscore og Industriscore ud fra den færdigbyggede portefølje.
+# Porteføljebygger v0.24
+# v0.24: Fase 0 viser de bagvedliggende analyse-/byggedata efter Industri. Fase 2 udfylder Regionscore, Sektorscore og Industriscore ud fra den færdigbyggede portefølje.
 # Aktiens historik opdateres permanent for hele aktieuniverset og bevares uafhængigt af aktieunivers.json; historikken kan ikke slettes fra brugerfladen.
 # Fase 1 får den valgfri, bløde prioritering Kursmålstrend baseret på de to seneste reelle Bear/Base/Bull-kursmål (25/50/25). Manglende historik behandles neutralt.
-# Porteføljebygger v0.23
-# v0.23: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
+# Porteføljebygger v0.24
+# v0.24: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
 # Fase 2 skjuler Frekvens, Seneste udbytte og Udbyttemåned i hovedtabellen; Udbytte % og Udbytteoversigt bevares.
-# Porteføljebygger v0.23
-# v0.23: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
-# Porteføljebygger v0.23
-# v0.23: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
+# Porteføljebygger v0.24
+# v0.24: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
+# Porteføljebygger v0.24
+# v0.24: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
 # Gentaget klik skifter stigende/faldende, og aktiv kolonne markeres med ▲/▼.
-# Porteføljebygger v0.23
-# v0.23: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
+# Porteføljebygger v0.24
+# v0.24: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
 # Porteføljen genindlæses eller genopbygges ikke under udbytteopdateringen; kun udbyttefelter opdateres.
-# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.23 bevares.
-# Porteføljebygger v0.23
-# v0.23: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
+# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.24 bevares.
+# Porteføljebygger v0.24
+# v0.24: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.23
-# v0.23: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
+# Porteføljebygger v0.24
+# v0.24: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.23: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.24: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.23 bevares uændret.
+# Industripræferencerne fra v0.24 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -825,7 +825,7 @@ phase2b_current_sort = "rank"
 phase2b_descending = False
 
 # Når Fase 0 kun laver en visuel preview af cachedata, må make_phase2_row ikke
-# skrive til historikfilen for hver enkelt aktie. Det gjorde v0.23-opstarten
+# skrive til historikfilen for hver enkelt aktie. Det gjorde v0.24-opstarten
 # meget langsom, fordi samme JSON blev læst/renset/gemt hundredvis af gange.
 _phase0_preview_mode = False
 _phase0_preview_history = None
@@ -8610,7 +8610,7 @@ def fetch(force_refresh=False):
     summary["value_dkk"] = format_dkk(total_value)
     summary["sort_value_dkk"] = total_value
     rows = [summary] + display_rows
-    # v0.23: beregn scorerne på den faktiske færdigbyggede DKK-fordeling.
+    # v0.24: beregn scorerne på den faktiske færdigbyggede DKK-fordeling.
     _apply_builder_allocation_scores_only(phase2_data_rows)
     phase2_rows = [make_phase2_row(summary, None, {})] + phase2_data_rows
     update_phase2_summary(phase2_rows[0], phase2_data_rows)
@@ -12906,7 +12906,7 @@ def _builder_update_universe_data_worker(force_refresh=False):
         merged_fundamental.update(normalize_phase2_cache(fundamental))
         cache["phase2"][key] = merged_fundamental
 
-        # v0.23: Historikken tilhører aktien – ikke aktieuniversfilen eller en konkret
+        # v0.24: Historikken tilhører aktien – ikke aktieuniversfilen eller en konkret
         # portefølje. Registrér derfor alle komplette kursmål fra hele universet,
         # allerede når Fase 0-data hentes. 2 %-støjfilteret i den eksisterende
         # historikmotor afgør fortsat, om observationen er en reel ændring.
@@ -14372,7 +14372,7 @@ def collect_builder_settings_from_ui():
     return base
 
 
-# ===== Porteføljebygger v0.23: historikgrafer og Fase 0-data =====
+# ===== Porteføljebygger v0.24: historikgrafer og Fase 0-data =====
 def _draw_phase3_target_chart(canvas, series, value_keys, title, y_label, percent=False, overlay_key=None, overlay_label=None):
     """Tegn en kompakt, responsiv tidsseriegraf direkte i Tkinter Canvas."""
     canvas.delete("all")
@@ -16544,9 +16544,9 @@ def _build_portfolio_pdf(result):
         ['Portfolio value',f"{_money(total)} {ccy}",'Positions',str(len(positions)),'Engine score',_fmt((result.get('engine',{}) or {}).get('score'),1)],
         ['Cash',f"{_money(cash)} {ccy}",'Currency',str(ccy),'',''],
         ['Weighted Bear 1Y',_pct(weighted('bear_1y_pct'),1),'Weighted Base 1Y',_pct(weighted('base_1y_pct'),1),'Weighted Bull 1Y',_pct(weighted('bull_1y_pct'),1)],
-        [Paragraph('Weighted dividend<br/>yield', ParagraphStyle('APBSummaryLabel', parent=small, fontName='Helvetica-Bold', fontSize=8.5, leading=9.2, textColor=colors.black, spaceAfter=0)),_pct(weighted('dividend_yield_pct'),2),'Dividend target',(_pct(((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('target_pct'),1) if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else 'Off'),'Dividend priority',(('High' if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('high_priority') else 'Normal') if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else '–')],
+        ['Weighted dividend yield',_pct(weighted('dividend_yield_pct'),2),'Dividend target',(_pct(((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('target_pct'),1) if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else 'Off'),'Dividend priority',(('High' if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('high_priority') else 'Normal') if ((result.get('original_input',{}) or {}).get('dividend',{}) or {}).get('enabled') else '–')],
     ]
-    t=Table(summary,colWidths=[31*mm,31*mm,31*mm,31*mm,31*mm,31*mm])
+    t=Table(summary,colWidths=[42*mm,24*mm,42*mm,24*mm,42*mm,24*mm])
     t.setStyle(TableStyle([
         ('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#f5f8fc')),
         ('BOX',(0,0),(-1,-1),0.5,colors.HexColor('#c9d7e8')),
@@ -16560,7 +16560,7 @@ def _build_portfolio_pdf(result):
         ('TOPPADDING',(0,0),(-1,-1),5),
         ('BOTTOMPADDING',(0,0),(-1,-1),5),
     ]))
-    story += [t,Paragraph('Built portfolio',h2),Paragraph('Positions are shown by model portfolio weight. Bear, Base and Bull are analyst 1-year scenarios used as inputs — not guaranteed outcomes.',small)]
+    story += [t,Spacer(1,4*mm),Paragraph('Built portfolio',h2),Paragraph('Positions are shown by model portfolio weight. Bear, Base and Bull are analyst 1-year scenarios used as inputs — not guaranteed outcomes.',small)]
 
     headers=['#','Name','Ticker','Exchange','Shares',f'Value ({ccy})','%PF','Structure','Sector','Dividend %','Bear 1Y','Base 1Y','Bull 1Y']
     data=[headers]
@@ -16601,6 +16601,7 @@ def _build_portfolio_pdf(result):
         tt.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#eaf2fb')),('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),8),('GRID',(0,0),(-1,-1),0.25,colors.HexColor('#d7e0ea')),('ALIGN',(1,1),(-1,-1),'RIGHT'),('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4)]))
 
         story.append(tt)
+        story.append(Spacer(1,4*mm))
 
     # Keep page 1 focused on the portfolio itself. Allocation analysis starts on page 2.
     story.append(PageBreak())
@@ -16666,6 +16667,7 @@ def show_result(result):
     with c1:_card("Portfolio value",f"{_money(total)} {ccy}",f"{len(positions)} positions")
     with c2:_card("Cash",f"{_money(portfolio.get('cash',{}).get('amount'))} {ccy}","Uninvested balance")
     with c3:_card("Engine score",_fmt(result.get("engine",{}).get("score"),1),"Portfolio optimisation")
+    st.write("")
     s1,s2,s3,s4=st.columns(4)
     with s1:_card("Weighted Bear 1Y",_pct(weighted("bear_1y_pct"),1),"Analyst bear case")
     with s2:_card("Weighted Base 1Y",_pct(weighted("base_1y_pct"),1),"Analyst base case")
