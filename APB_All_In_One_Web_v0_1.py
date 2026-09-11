@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.10
-# v0.10: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.11
+# v0.11: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -313,7 +313,7 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.10 bevares uændret.
+# Industripræferencerne fra v0.11 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -15769,42 +15769,60 @@ def _normalize_money_widget(key, default):
     st.session_state[key] = _format_eu_integer_input(st.session_state.get(key, default), default)
 
 
-def _sync_basic_number_to_slider(number_key, slider_key, maximum, integer=True):
-    value=_safe(st.session_state.get(number_key,0),0.0)
+def _sync_basic_number_to_slider(number_key, slider_key, maximum, integer=True, money=False):
+    raw=st.session_state.get(number_key,0)
+    value=_parse_eu_number(raw,0.0) if money else _safe(raw,0.0)
     value=max(0.0,min(float(maximum),value))
     if integer:
         value=int(round(value))
     st.session_state[slider_key]=value
+    if money:
+        st.session_state[number_key]=_format_eu_integer_input(value,0)
 
 
-def _sync_basic_slider_to_number(slider_key, number_key, integer=True):
+def _sync_basic_slider_to_number(slider_key, number_key, integer=True, money=False):
     value=_safe(st.session_state.get(slider_key,0),0.0)
-    st.session_state[number_key]=int(round(value)) if integer else float(value)
+    value=int(round(value)) if integer else float(value)
+    st.session_state[number_key]=_format_eu_integer_input(value,0) if money else value
 
 
-def _basic_number_with_slider(label,key,maximum,step,help_text):
+def _basic_number_with_slider(label,key,maximum,step,help_text,money=False):
     slider_key=f"{key}_slider"
     if key not in st.session_state:
-        st.session_state[key]=0
+        st.session_state[key]="0" if money else 0
     if slider_key not in st.session_state:
-        st.session_state[slider_key]=int(round(_safe(st.session_state.get(key),0.0)))
-    st.number_input(
-        label, min_value=0, max_value=int(maximum), step=int(step), key=key,
-        help=help_text,
-        on_change=_sync_basic_number_to_slider, args=(key,slider_key,maximum,True),
-    )
+        raw=st.session_state.get(key,0)
+        parsed=_parse_eu_number(raw,0.0) if money else _safe(raw,0.0)
+        st.session_state[slider_key]=int(round(parsed))
+    if money:
+        st.text_input(
+            label,key=key,help=help_text,
+            on_change=_sync_basic_number_to_slider,args=(key,slider_key,maximum,True,True),
+        )
+    else:
+        st.number_input(
+            label,min_value=0,max_value=int(maximum),step=int(step),key=key,
+            help=help_text,
+            on_change=_sync_basic_number_to_slider,args=(key,slider_key,maximum,True,False),
+        )
     st.slider(
-        f"{label} slider", min_value=0, max_value=int(maximum), step=int(step), key=slider_key,
+        f"{label} slider",min_value=0,max_value=int(maximum),step=int(step),key=slider_key,
         label_visibility="collapsed",
-        on_change=_sync_basic_slider_to_number, args=(slider_key,key,True),
+        on_change=_sync_basic_slider_to_number,args=(slider_key,key,True,money),
     )
 
 def _sync_dividend_number_to_slider():
     st.session_state["dividend_target_slider"]=float(_safe(st.session_state.get("dividend_target_pct",3.0),3.0))
+    st.session_state["_open_dividend_once"]=True
 
 
 def _sync_dividend_slider_to_number():
     st.session_state["dividend_target_pct"]=float(_safe(st.session_state.get("dividend_target_slider",3.0),3.0))
+    st.session_state["_open_dividend_once"]=True
+
+
+def _keep_dividend_open_once():
+    st.session_state["_open_dividend_once"]=True
 
 
 def _pct(v,n=1):
@@ -15984,8 +16002,8 @@ def _current_display_username():
 def make_order_from_ui(mode="simple"):
     # Session-state values are generated by the widgets below.
     currency=st.session_state.get("currency","Select")
-    value=_safe(st.session_state.get("portfolio_value_input",0),0.0)
-    minpos=_safe(st.session_state.get("minimum_position_input",0),0.0)
+    value=_parse_eu_number(st.session_state.get("portfolio_value_input",0),0.0)
+    minpos=_parse_eu_number(st.session_state.get("minimum_position_input",0),0.0)
     maxstocks=int(_safe(st.session_state.get("maximum_stocks",0),0))
     minsector=int(st.session_state.get("minimum_sector",0))
 
@@ -16807,10 +16825,10 @@ def render_builder():
     st.caption("Set the capital available for the portfolio, the number of different stocks and the portfolio's risk/diversification targets. APB then searches the available universe for the strongest overall fit.")
 
     if not st.session_state.get("_basic_rules_v010_initialized",False):
-        st.session_state["currency"]=None
-        st.session_state["portfolio_value_input"]=0
+        st.session_state["currency"]="Select"
+        st.session_state["portfolio_value_input"]="0"
         st.session_state["portfolio_value_input_slider"]=0
-        st.session_state["minimum_position_input"]=0
+        st.session_state["minimum_position_input"]="0"
         st.session_state["minimum_position_input_slider"]=0
         st.session_state["maximum_stocks"]=0
         st.session_state["maximum_stocks_slider"]=0
@@ -16819,13 +16837,15 @@ def render_builder():
     # First-use basic rules deliberately start unselected/at zero so a portfolio
     # cannot be built accidentally from hidden defaults. Numeric fields and sliders
     # are synchronized in both directions.
+    if st.session_state.get("currency") not in ("Select","DKK","EUR","USD"):
+        st.session_state["currency"]="Select"
+
     top1,top2,top3,top4=st.columns([0.75,1.8,1.8,1.55])
     with top1:
         st.selectbox(
             "Currency",
-            ["DKK","EUR","USD"],
-            index=None,
-            placeholder="Select",
+            ["Select","DKK","EUR","USD"],
+            index=0,
             key="currency",
             help="Select the currency used for all portfolio amounts and in the final report.",
         )
@@ -16834,12 +16854,12 @@ def render_builder():
     with top2:
         _basic_number_with_slider(
             f"Capital available ({currency_label})","portfolio_value_input",100_000_000,10_000,
-            "The total amount APB may use when constructing the portfolio. Enter a value or use the slider.",
+            "The total amount APB may use when constructing the portfolio. Enter a value or use the slider.",money=True,
         )
     with top3:
         _basic_number_with_slider(
             f"Minimum per stock ({currency_label})","minimum_position_input",10_000_000,1_000,
-            "The smallest amount APB may allocate to one stock position. Enter a value or use the slider.",
+            "The smallest amount APB may allocate to one stock position. Enter a value or use the slider.",money=True,
         )
     with top4:
         _basic_number_with_slider(
@@ -16941,13 +16961,15 @@ def render_builder():
     if "dividend_target_slider" not in st.session_state:
         st.session_state["dividend_target_slider"]=float(st.session_state.get("dividend_target_pct",3.0))
     dividend_heading=f"Dividend | {'On' if st.session_state.get('dividend_enabled',False) else 'Off'}"
-    with st.expander(dividend_heading,expanded=(st.session_state.get("_open_target_section")=="dividend")):
+    dividend_force_open=bool(st.session_state.pop("_open_dividend_once",False))
+    with st.expander(dividend_heading,expanded=dividend_force_open):
         st.caption("Dividend is optional. When enabled, APB favours portfolios whose weighted dividend yield reaches the selected target while still balancing the other portfolio rules.")
-        st.checkbox("Include dividend preference",key="dividend_enabled")
+        st.checkbox("Include dividend preference",key="dividend_enabled",on_change=_keep_dividend_open_once)
         dividend_on=bool(st.session_state.get("dividend_enabled",False))
         st.checkbox(
             "High priority",key="dividend_high_priority",disabled=not dividend_on,
             help="Default is High priority. Switch this off if dividend should influence the build more gently.",
+            on_change=_keep_dividend_open_once,
         )
         st.number_input(
             "Target dividend yield (%)",min_value=0.0,max_value=15.0,step=0.1,
@@ -16985,8 +17007,8 @@ def render_builder():
     if st.button("BUILD PORTFOLIO",type="primary",use_container_width=True,disabled=quota_blocked):
         basic_errors=[]
         currency=st.session_state.get("currency","Select")
-        capital=_safe(st.session_state.get("portfolio_value_input",0),0.0)
-        minimum_position=_safe(st.session_state.get("minimum_position_input",0),0.0)
+        capital=_parse_eu_number(st.session_state.get("portfolio_value_input",0),0.0)
+        minimum_position=_parse_eu_number(st.session_state.get("minimum_position_input",0),0.0)
         stock_count=int(_safe(st.session_state.get("maximum_stocks",0),0))
         if currency not in SUPPORTED_PORTFOLIO_CURRENCIES:
             basic_errors.append("Select a portfolio currency.")
