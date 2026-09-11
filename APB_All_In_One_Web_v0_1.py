@@ -1,4 +1,5 @@
-# APB All-In-One Web v0.29
+# APB All-In-One Web v0.30
+# v0.30: Logout now recreates the login fields with fresh Streamlit widget keys so browser password-manager/autofill suggestions can reappear without closing and reopening the tab.
 # v0.29: Built portfolio now expands vertically to show every position at once instead of capping the table height and requiring vertical scrolling.
 # v0.28: Fixes European money parsing for values with multiple thousands separators such as 1.000.000, so capital is no longer interpreted as zero.
 # v0.27: When capital and minimum-position constraints leave no optimisation room, offers Build portfolio anyway, reduces the requested stock count by 20% to a whole number, updates the visible field and continues the build.
@@ -16477,8 +16478,12 @@ def login_screen():
                 '<div class="apb-login-subtitle">Sign in to access your portfolio builder.</div>',
                 unsafe_allow_html=True,
             )
-            username=st.text_input("Username",key="login_username")
-            password=st.text_input("Password",type="password",key="login_password")
+            # Give the browser genuinely new login inputs after a logout. Streamlit's
+            # normal rerun otherwise reuses the same widget identities, which can prevent
+            # browser password-manager/autofill suggestions from appearing again.
+            login_nonce=int(st.session_state.get("login_nonce",0) or 0)
+            username=st.text_input("Username",key=f"login_username_{login_nonce}")
+            password=st.text_input("Password",type="password",key=f"login_password_{login_nonce}")
             if st.button("LOG IN",type="primary",use_container_width=True):
                 entered=str(username or "").strip()
 
@@ -17311,7 +17316,7 @@ def render_builder():
 
 
 # ----------------------------- APP SHELL ------------------------------------
-for key,default in (("result_data",None),("auth_user",None),("auth_tier",None),("admin_page","Users")):
+for key,default in (("result_data",None),("auth_user",None),("auth_tier",None),("admin_page","Users"),("login_nonce",0)):
     if key not in st.session_state: st.session_state[key]=default
 
 if not st.session_state.auth_user:
@@ -17334,6 +17339,12 @@ with head2:
         unsafe_allow_html=True,
     )
     if st.button("Log out",use_container_width=True):
+        # Remove the current login widgets and create fresh widget identities for the
+        # login screen. This gives the browser password manager a new autofill target.
+        login_nonce=int(st.session_state.get("login_nonce",0) or 0)
+        st.session_state.pop(f"login_username_{login_nonce}",None)
+        st.session_state.pop(f"login_password_{login_nonce}",None)
+        st.session_state["login_nonce"]=login_nonce+1
         for k in ("auth_user","auth_tier","result_data"): st.session_state[k]=None
         st.session_state.pop("_open_target_section",None)
         st.rerun()
