@@ -1,4 +1,5 @@
-# APB All-In-One Web v0.27
+# APB All-In-One Web v0.28
+# v0.28: Fixes European money parsing for values with multiple thousands separators such as 1.000.000, so capital is no longer interpreted as zero.
 # v0.27: When capital and minimum-position constraints leave no optimisation room, offers Build portfolio anyway, reduces the requested stock count by 20% to a whole number, updates the visible field and continues the build.
 # v0.26: Adds a permanent neutral Skool community link below the login form, suitable for both existing members and public test users.
 # APB All-In-One Web v0.25
@@ -15830,18 +15831,28 @@ def _money(v):
     return _fmt(v,0)
 
 def _parse_eu_number(value, default=0.0):
-    """Parse friendly European input such as 100.000 or 100.000,50."""
+    """Parse friendly European input such as 100.000, 1.000.000 or 100.000,50."""
     try:
         s=str(value or "").strip().replace(" ","")
         if not s:
             return float(default)
+
+        # European decimal comma: dots are thousands separators.
         if "," in s:
             s=s.replace(".","").replace(",",".")
+
         elif "." in s:
             parts=s.split(".")
-            # A single 3-digit suffix is treated as a thousands separator.
-            if len(parts)==2 and len(parts[1])==3 and parts[0].lstrip("+-").isdigit() and parts[1].isdigit():
+            signless_first=parts[0].lstrip("+-")
+
+            # Treat one or more dot-separated 3-digit groups as thousands
+            # separators: 1.000, 20.000, 1.000.000, 10.000.000, etc.
+            if (
+                signless_first.isdigit()
+                and all(part.isdigit() and len(part)==3 for part in parts[1:])
+            ):
                 s="".join(parts)
+
         return float(s)
     except Exception:
         return float(default)
