@@ -1,5 +1,5 @@
-# APB All-In-One Web v0.20
-# v0.20: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
+# APB All-In-One Web v0.22
+# v0.22: Adds first-use validation for Currency/capital/minimum position/stock count, synchronized sliders for the three numeric basic rules, and a web Dividend preference with Off/On heading, High priority and 3% target. Result view/PDF show weighted portfolio dividend yield.
 # v0.9d: Adds synchronized drag sliders to all required 100% allocations (Structure, Sectors, Regions). Slider changes use the same automatic proportional/equal rebalance logic as direct numeric edits.
 # v0.9c: When automatic balancing is switched on for a required 100% allocation, the current values are immediately normalized proportionally to exactly 100.0%.
 # v0.9k: Fixes Industry Custom setup completely: adds it to the dropdown, uses the Industry preset callback, prevents Custom from changing values, keeps heading/dropdown synchronized, and preserves High priority behavior for real presets.
@@ -290,30 +290,30 @@ MARKETAUX_TOKEN_FILE = Path.cwd() / "marketaux_api_token.txt"
 # v0.23: Fase 0 viser de bagvedliggende analyse-/byggedata efter Industri. Fase 2 udfylder Regionscore, Sektorscore og Industriscore ud fra den færdigbyggede portefølje.
 # Aktiens historik opdateres permanent for hele aktieuniverset og bevares uafhængigt af aktieunivers.json; historikken kan ikke slettes fra brugerfladen.
 # Fase 1 får den valgfri, bløde prioritering Kursmålstrend baseret på de to seneste reelle Bear/Base/Bull-kursmål (25/50/25). Manglende historik behandles neutralt.
-# Porteføljebygger v0.21
-# v0.21: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
+# Porteføljebygger v0.22
+# v0.22: Fase 0 markerer låste aktier med en lidt dybere grøn/rød nuance end frie aktier.
 # Fase 2 skjuler Frekvens, Seneste udbytte og Udbyttemåned i hovedtabellen; Udbytte % og Udbytteoversigt bevares.
-# Porteføljebygger v0.20
-# v0.20: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
-# Porteføljebygger v0.20
-# v0.20: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
+# Porteføljebygger v0.22
+# v0.22: Fase 0 – tilføjer Region, Sektor og Industri efter Status. Kolonnerne er sorterbare.
+# Porteføljebygger v0.22
+# v0.22: Fase 0 – Aktieunivers kan sorteres på alle kolonner via klik på overskriften.
 # Gentaget klik skifter stigende/faldende, og aktiv kolonne markeres med ▲/▼.
-# Porteføljebygger v0.20
-# v0.20: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
+# Porteføljebygger v0.22
+# v0.22: Udbytteoversigten låser nu præcis den aktuelt viste Fase 2-portefølje ved klik.
 # Porteføljen genindlæses eller genopbygges ikke under udbytteopdateringen; kun udbyttefelter opdateres.
-# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.20 bevares.
-# Porteføljebygger v0.20
-# v0.20: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
+# Match sker entydigt på børs+ticker, mens layout og progress-visning fra v0.22 bevares.
+# Porteføljebygger v0.22
+# v0.22: Udbytteoversigtens layout er genetableret til v0.12-layoutet uændret.
 # Udbytteopdateringen kører i baggrundstråd med synlig status/progress, så GUI ikke fryser.
 # Den byggede portefølje i portefolje_fase2.json er fortsat entydig sandhedskilde.
-# Porteføljebygger v0.20
-# v0.20: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
+# Porteføljebygger v0.22
+# v0.22: Udbytteoversigten bruger portefolje_fase2.json som entydig sandhedskilde,
 # opdaterer udbyttedata for netop disse positioner og genopbygger Fase 2 før visning.
-# v0.20: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
+# v0.22: Udbytteoversigten synkroniseres altid med den senest byggede portefølje.
 # Den byggede Fase 2-porteføljesammensætning gemmes desuden i portefolje_fase2.json
 # (børs, ticker, navn og antal), indlæses automatisk ved næste programstart og kan
 # kopieres direkte til en anden programmappe som standardportefølje.
-# Industripræferencerne fra v0.20 bevares uændret.
+# Industripræferencerne fra v0.22 bevares uændret.
 STOCK_UNIVERSE_FILE = Path.cwd() / "aktieunivers.json"
 STOCK_UNIVERSE_BACKUP_FILE = Path.cwd() / "aktieunivers_backup.json"
 # Fase 0 kan læses fra GUI-tråden samtidig med, at data-worker gemmer universet.
@@ -15145,8 +15145,8 @@ div[data-testid="stColumn"]:has([class*="st-key-minimum_position_input"]) {
 [class*="st-key-portfolio_value_input_plus"] button:hover,
 [class*="st-key-minimum_position_input_minus"] button:hover,
 [class*="st-key-minimum_position_input_plus"] button:hover {
-    background: rgba(21, 101, 192, 0.08) !important;
-    color: #1565c0 !important;
+    background: #1565c0 !important;
+    color: #ffffff !important;
 }
 
 /* Do not visually remember the last clicked button. */
