@@ -16165,7 +16165,7 @@ REMOTE_ENGINE_FILES = {
     "aktieunivers.json",
     "portefolje_dagsdata_cache.json",
 }
-TIER_BUILD_LIMITS = {"Standard":1, "Premium":5, "VIP":25}
+TIER_BUILD_LIMITS = {"Standard":5, "Premium":25, "VIP":100}
 
 
 def _configured_apb_secret():
