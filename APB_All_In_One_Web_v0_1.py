@@ -1,4 +1,5 @@
-# APB All-In-One Web v0.30
+# APB All-In-One Web v0.31
+# v0.31: Web builder now continues with all usable stock candidates when one or more universe stocks have missing/invalid cached data; unavailable stocks are excluded from that build instead of stopping the engine.
 # v0.30: Logout now recreates the login fields with fresh Streamlit widget keys so browser password-manager/autofill suggestions can reappear without closing and reopening the tab.
 # v0.29: Built portfolio now expands vertically to show every position at once instead of capping the table height and requiring vertical scrolling.
 # v0.28: Fixes European money parsing for values with multiple thousands separators such as 1.000.000, so capital is no longer interpreted as zero.
@@ -15989,9 +15990,12 @@ def run_engine(order, progress=None):
     candidates, missing, universe_total = _builder_candidate_rows()
     if not candidates:
         raise ValueError("No usable candidates were found. Upload/populate aktieunivers.json and portefolje_dagsdata_cache.json first.")
-    if missing:
-        raise ValueError(f"Stock universe data are incomplete: {len(candidates)} usable of {universe_total}; {len(missing)} missing/invalid.")
 
+    # Missing/invalid stock data must not block the web builder.
+    # _builder_candidate_rows() already excludes unusable universe entries, so the
+    # optimiser simply continues with the candidates that are fully available.
+    # This also keeps aktieunivers.json/cache formats unchanged and compatible
+    # with the desktop version.
     target_value=settings["portfolio_value_dkk"]
     minimum=settings["minimum_position_dkk"]
     max_by_capital=max(1,int(target_value//minimum)) if minimum>0 else len(candidates)
