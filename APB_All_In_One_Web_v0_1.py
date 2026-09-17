@@ -3132,6 +3132,7 @@ TV_FUNDAMENTAL_COLUMNS = [
     "price_target_high", "price_target_1y", "price_target_median", "price_target_low",
     "earnings_release_next_date",
     "dividends_yield_current",
+    "dps_common_stock_prim_issue_yoy_growth_fy", "continuous_dividend_growth",
     "number_of_analysts", "recommendation_mark", "recommendation_buy", "recommendation_hold", "recommendation_sell",
     "total_revenue_3y_growth", "revenue_3y_growth", "total_revenue_cagr_3y", "revenue_cagr_3y",
     "total_revenue_yoy_growth_ttm", "revenue_yoy_growth_ttm",
@@ -3184,6 +3185,8 @@ def fetch_fundamental_row_from_tradingview_scanner(item):
                 "target_low": ("price_target_low",),
                 "earnings_next_date": ("earnings_release_next_date",),
                 "dividend_yield": ("dividends_yield_current",),
+                "dividend_growth_yoy": ("dps_common_stock_prim_issue_yoy_growth_fy",),
+                "continuous_dividend_growth": ("continuous_dividend_growth",),
                 "analyst_count": ("number_of_analysts",),
                 "revenue_growth_3y": ("total_revenue_3y_growth", "revenue_3y_growth", "total_revenue_cagr_3y", "revenue_cagr_3y", "total_revenue_yoy_growth_ttm", "revenue_yoy_growth_ttm"),
                 "ebit_margin_ttm": ("ebit_margin_ttm", "operating_margin_ttm"),
@@ -3253,6 +3256,8 @@ def fetch_scanner_rows_batch(items, batch_size=100):
                 "target_low": ("price_target_low",),
                 "earnings_next_date": ("earnings_release_next_date",),
                 "dividend_yield": ("dividends_yield_current",),
+                "dividend_growth_yoy": ("dps_common_stock_prim_issue_yoy_growth_fy",),
+                "continuous_dividend_growth": ("continuous_dividend_growth",),
                 "analyst_count": ("number_of_analysts",),
             }.items():
                 value = _extract_by_column(TV_FUNDAMENTAL_COLUMNS, values, *cols)
@@ -5294,6 +5299,8 @@ def make_phase2_row(display_row, raw_row=None, fundamental=None, analyst_error=N
         "target_age_days": format_target_age_days(target_age_days, target_age_date_known),
         "days_to_earnings": format_days(days_to_earnings),
         "dividend_yield": (format_num(dividend_yield, 2) + "%") if dividend_yield is not None else "-",
+        "dividend_growth_yoy_raw": parse_float(fundamental.get("dividend_growth_yoy"), None),
+        "continuous_dividend_growth_raw": parse_float(fundamental.get("continuous_dividend_growth"), None),
         "dividend_frequency": dividend_frequency if dividend_frequency else "-",
         "dividend_last": format_dividend_last_month(dividend_last_date),
         "dividend_months": dividend_months,
@@ -12327,6 +12334,7 @@ def _default_builder_settings():
         "use_target_trend": True,
         "use_dividend_target": False,
         "dividend_target_pct": 2.0,
+        "dividend_style": "Balanced",
         "region_targets": dict(DEFAULT_REGION_TARGETS),
         "sector_targets": dict(DEFAULT_SECTOR_TARGETS),
         "structure_targets": dict(STRUCTURE_PROFILES["Balanceret"]["targets"]),
@@ -12354,6 +12362,7 @@ def load_builder_settings():
                 data["use_target_trend"] = bool(loaded.get("use_target_trend", data["use_target_trend"]))
                 data["use_dividend_target"] = bool(loaded.get("use_dividend_target", data["use_dividend_target"]))
                 data["dividend_target_pct"] = max(0.0, normalize_number(loaded.get("dividend_target_pct"), data["dividend_target_pct"]))
+                data["dividend_style"] = str(loaded.get("dividend_style", data.get("dividend_style", "Balanced")) or "Balanced")
                 source_weights = loaded.get("objective_weights", {})
                 if isinstance(source_weights, dict):
                     for key in data["objective_weights"]:
@@ -12634,6 +12643,7 @@ def _universe_item_ready(item, cache=None):
         and not value_is_missing(fundamental.get("industry"))
         and not value_is_missing(fundamental.get("country"))
         and not value_is_missing(fundamental.get("market_cap"))
+        and int(parse_float(fundamental.get("dividend_growth_schema"), 0) or 0) >= 1
     )
 
 
@@ -12788,7 +12798,7 @@ def _builder_full_scanner_batch(items, batch_size=100):
         "target_high": ("price_target_high",), "target_base": ("price_target_1y",),
         "target_median": ("price_target_median",), "target_low": ("price_target_low",),
         "earnings_next_date": ("earnings_release_next_date",),
-        "dividend_yield": ("dividends_yield_current",), "analyst_count": ("number_of_analysts",),
+        "dividend_yield": ("dividends_yield_current",), "dividend_growth_yoy": ("dps_common_stock_prim_issue_yoy_growth_fy",), "continuous_dividend_growth": ("continuous_dividend_growth",), "analyst_count": ("number_of_analysts",),
         "revenue_growth_3y": ("total_revenue_3y_growth", "revenue_3y_growth", "total_revenue_cagr_3y", "revenue_cagr_3y", "total_revenue_yoy_growth_ttm", "revenue_yoy_growth_ttm"),
         "ebit_margin_ttm": ("ebit_margin_ttm", "operating_margin_ttm"),
         "roic": ("return_on_invested_capital", "return_on_invested_capital_ttm", "return_on_invested_capital_fq"),
@@ -12907,6 +12917,9 @@ def _builder_update_universe_data_worker(force_refresh=False):
             except Exception:
                 pass
 
+        # Marker gør, at første normale kørsel efter denne opdatering genhenter
+        # universet én gang, også for selskaber hvor dividend-growth-felterne legitimt er tomme.
+        fundamental["dividend_growth_schema"] = 1
         if fundamental.get("name"):
             item["name"] = str(fundamental.get("name"))
         merged_fundamental = normalize_phase2_cache(cache.get("phase2", {}).get(key, {}))
@@ -13054,6 +13067,8 @@ def _builder_candidate_rows():
         base_1y = parse_float(row.get("analyst_base_pct"), None)
         stock_score = parse_float(row.get("sort_stock_score"), None)
         dividend_yield = max(0.0, parse_float(row.get("sort_dividend_yield"), 0.0) or 0.0)
+        dividend_growth_yoy = parse_float(row.get("dividend_growth_yoy_raw"), None)
+        continuous_dividend_growth = parse_float(row.get("continuous_dividend_growth_raw"), None)
         layer = str(row.get("structure_layer") or "Potentiale")
         layer = structure_layer_from_display(layer)
         # Premium web builder deliberately does not use price-target history.
@@ -13069,6 +13084,8 @@ def _builder_candidate_rows():
             "target_trend_score": trend_score,
             "target_trend_known": trend_known,
             "dividend_yield": dividend_yield,
+            "dividend_growth_yoy": dividend_growth_yoy,
+            "continuous_dividend_growth": continuous_dividend_growth,
             "locked": False,
             "sector": mapped_sector(row.get("sector")),
             "industry": normalized_industry(row.get("industry")),
@@ -13179,14 +13196,41 @@ def _builder_base_score(base_pct):
     return nonlinear_potential_curve(base_pct if base_pct is not None else 0.0)
 
 
-def _builder_dividend_score(yield_pct, settings):
-    """0-100 målopfyldelse. Målet belønnes frem til 100; overskydende yield giver ikke ekstra score."""
+def _builder_dividend_score(yield_pct, settings, growth_yoy=None, growth_years=None):
+    """0-100 udbyttescore baseret på valgt stil: aktuel indkomst, balance eller vækst."""
     if not settings.get("use_dividend_target", False):
         return 100.0
     target = max(0.0, float(settings.get("dividend_target_pct", 0.0) or 0.0))
-    if target <= 0:
-        return 100.0
-    return clamp(float(yield_pct or 0.0) / target * 100.0, 0.0, 100.0)
+    yield_score = 100.0 if target <= 0 else clamp(float(yield_pct or 0.0) / target * 100.0, 0.0, 100.0)
+    gy = parse_float(growth_yoy, None)
+    yrs = parse_float(growth_years, None)
+    # 10% årlig DPS-vækst er stærkt; 20%+ får fuld score. Negativ/ukendt vækst får 0.
+    growth_score = clamp((gy or 0.0) * 5.0, 0.0, 100.0) if gy is not None else 0.0
+    # TradingViews Continuous Dividend Growth ligger aktuelt på 1-7 år.
+    consistency_score = clamp((yrs or 0.0) / 7.0 * 100.0, 0.0, 100.0) if yrs is not None else 0.0
+    style = str(settings.get("dividend_style", "Balanced") or "Balanced").strip().casefold()
+    if style == "income":
+        return yield_score
+
+    # Optional neutral treatment of missing dividend-growth data. When enabled,
+    # unavailable growth fields are left out and the remaining dividend weights
+    # are re-normalised instead of treating missing data as zero. Current yield
+    # is deliberately unaffected by this option.
+    neutral_missing_growth = bool(settings.get("dividend_growth_missing_neutral", True))
+    if style in ("dividend growth", "growth", "udbyttevækst"):
+        weighted_parts = [(0.15, yield_score)]
+        if gy is not None or not neutral_missing_growth:
+            weighted_parts.append((0.55, growth_score))
+        if yrs is not None or not neutral_missing_growth:
+            weighted_parts.append((0.30, consistency_score))
+    else:
+        weighted_parts = [(0.45, yield_score)]
+        if gy is not None or not neutral_missing_growth:
+            weighted_parts.append((0.35, growth_score))
+        if yrs is not None or not neutral_missing_growth:
+            weighted_parts.append((0.20, consistency_score))
+    weight_total = sum(weight for weight, _ in weighted_parts)
+    return sum(weight * score for weight, score in weighted_parts) / weight_total if weight_total > 0 else yield_score
 
 
 def _builder_portfolio_metrics(selected, settings):
@@ -13202,7 +13246,11 @@ def _builder_portfolio_metrics(selected, settings):
     target_trend = sum(float(c.get("target_trend_score", 50.0) or 50.0) for c in selected) / len(selected)
     target_trend_pct = sum(float(c.get("target_trend_pct", 0.0) or 0.0) for c in selected) / len(selected)
     dividend_yield = sum(float(c.get("dividend_yield", 0.0) or 0.0) for c in selected) / len(selected)
-    dividend_match = _builder_dividend_score(dividend_yield, settings)
+    dividend_growth_vals = [c.get("dividend_growth_yoy") for c in selected if c.get("dividend_growth_yoy") is not None]
+    dividend_year_vals = [c.get("continuous_dividend_growth") for c in selected if c.get("continuous_dividend_growth") is not None]
+    dividend_growth_yoy = (sum(float(v) for v in dividend_growth_vals) / len(dividend_growth_vals)) if dividend_growth_vals else None
+    dividend_growth_years = (sum(float(v) for v in dividend_year_vals) / len(dividend_year_vals)) if dividend_year_vals else None
+    dividend_match = _builder_dividend_score(dividend_yield, settings, dividend_growth_yoy, dividend_growth_years)
     components = {
         "base_1y": sum(base_scores) / len(base_scores),
         "stock_score": sum(stocks) / len(stocks),
@@ -13396,7 +13444,11 @@ def _builder_portfolio_metrics_weighted(selected, position_values, settings):
     target_trend = sum(float(c.get("target_trend_score",50.0) or 50.0) * w for c,w in zip(selected,weights_dkk))
     target_trend_pct = sum(float(c.get("target_trend_pct",0.0) or 0.0) * w for c,w in zip(selected,weights_dkk))
     dividend_yield = sum(float(c.get("dividend_yield",0.0) or 0.0) * w for c,w in zip(selected,weights_dkk))
-    dividend_match = _builder_dividend_score(dividend_yield, settings)
+    dividend_growth_vals = [c.get("dividend_growth_yoy") for c in selected if c.get("dividend_growth_yoy") is not None]
+    dividend_year_vals = [c.get("continuous_dividend_growth") for c in selected if c.get("continuous_dividend_growth") is not None]
+    dividend_growth_yoy = (sum(float(v) for v in dividend_growth_vals) / len(dividend_growth_vals)) if dividend_growth_vals else None
+    dividend_growth_years = (sum(float(v) for v in dividend_year_vals) / len(dividend_year_vals)) if dividend_year_vals else None
+    dividend_match = _builder_dividend_score(dividend_yield, settings, dividend_growth_yoy, dividend_growth_years)
     components={"base_1y":base_score,"stock_score":stock_score,"structure":structure_match,"sector":sector_match,"industry":industry_match,"region":region_match,"target_trend":target_trend,"dividend":dividend_match}
     objective=settings.get("objective_weights",{})
     def effective_weight(k):
@@ -14364,6 +14416,7 @@ def collect_builder_settings_from_ui():
     base["use_target_trend"] = bool(builder_use_target_trend_var.get())
     base["use_dividend_target"] = bool(builder_use_dividend_var.get())
     base["dividend_target_pct"] = max(0.0, normalize_number(builder_dividend_target_var.get(), base.get("dividend_target_pct", 2.0)))
+    base["dividend_style"] = str(builder_dividend_style_var.get() or "Balanced") if "builder_dividend_style_var" in globals() else str(base.get("dividend_style","Balanced"))
     for key, var in builder_objective_vars.items():
         base["objective_weights"][key] = max(0.0, normalize_number(var.get(), base["objective_weights"].get(key, 0.0)))
     for cat,var in builder_region_vars.items():
@@ -15977,6 +16030,8 @@ def order_to_settings(order):
     d = order.get("dividend",{}) or {}
     s["use_dividend_target"] = bool(d.get("enabled",False))
     s["dividend_target_pct"] = max(0.0,_safe(d.get("target_pct"),2.0))
+    s["dividend_style"] = str(d.get("style","Balanced") or "Balanced")
+    s["dividend_growth_missing_neutral"] = bool(d.get("missing_growth_neutral", True))
     return s
 
 
@@ -16040,9 +16095,11 @@ def run_engine(order, progress=None):
             "change_1d_pct":parse_float(row.get("pct_1d"),None),"sector":str(row.get("sector","") or ""),
             "industry":str(row.get("industry","") or ""),"country_region":str(row.get("country","") or ""),
             "structure_layer":str(row.get("structure_layer",c.get("layer","") or "")),
+            "stock_score":parse_float(row.get("stock_score"),None),"quality_score":parse_float(row.get("quality_score"),None),
             "bear_target":parse_float(row.get("bear_target_abs"),None),"base_target":parse_float(row.get("base_target_abs"),None),"bull_target":parse_float(row.get("bull_target_abs"),None),
             "bear_1y_pct":parse_float(row.get("analyst_bear_pct"),None),"base_1y_pct":parse_float(row.get("analyst_base_pct"),None),"bull_1y_pct":parse_float(row.get("analyst_bull_pct"),None),
             "days_to_earnings":parse_float(row.get("days_to_earnings"),None),"dividend_yield_pct":parse_float(row.get("dividend_yield"),None),
+            "dividend_growth_yoy_pct":parse_float(row.get("dividend_growth_yoy_raw"),None),"continuous_dividend_growth_years":parse_float(row.get("continuous_dividend_growth_raw"),None),
             "pe":parse_float(row.get("pe"),None),"peg":parse_float(row.get("peg"),None),"revenue_growth_3y_pct":parse_float(row.get("revenue_growth_3y"),None),
             "ebit_margin_ttm_pct":parse_float(row.get("ebit_margin_ttm"),None),"roic_pct":parse_float(row.get("roic"),None),
             "fcf_margin_pct":parse_float(row.get("fcf_margin_ttm"),None),"fcf_growth_3y_pct":parse_float(row.get("fcf_growth_3y"),None),"sma50":parse_float(row.get("sma50"),None),
@@ -16122,6 +16179,8 @@ def make_order_from_ui(mode="simple"):
         dividend_enabled=False
         dividend_high=True
         dividend_target=3.0
+        dividend_style="Balanced"
+        dividend_growth_missing_neutral=True
     else:
         structure_web={k:float(st.session_state.get(f"str_{k}",v)) for k,v in STRUCTURE_TARGET_PROFILES["Balanced"].items()}
         sectors={k:float(st.session_state.get(f"sec_{k}",v)) for k,v in SECTOR_TARGET_PROFILES["Balanced"].items()}
@@ -16135,6 +16194,8 @@ def make_order_from_ui(mode="simple"):
         dividend_enabled=bool(st.session_state.get("dividend_enabled",False))
         dividend_high=bool(st.session_state.get("dividend_high_priority",True))
         dividend_target=max(0.0,_safe(st.session_state.get("dividend_target_pct",3.0),3.0))
+        dividend_style=str(st.session_state.get("dividend_style","Balanced") or "Balanced")
+        dividend_growth_missing_neutral=bool(st.session_state.get("dividend_growth_missing_neutral",True))
 
     return {
         "type":"apb_order","schema_version":"web-0.2","name":_current_display_username(),"skool_username":_current_display_username(),"email":"",
@@ -16150,7 +16211,7 @@ def make_order_from_ui(mode="simple"):
             "Dividend":250.0 if (dividend_enabled and dividend_high) else (10.0 if dividend_enabled else 0.0),
         },
         "sectors":sectors,"industry_preferences":industry_preferences,"regions":regions,"structure_layers":structure_web,
-        "price_target_trend":{"enabled":False},"dividend":{"enabled":dividend_enabled,"target_pct":dividend_target,"high_priority":dividend_high},
+        "price_target_trend":{"enabled":False},"dividend":{"enabled":dividend_enabled,"target_pct":dividend_target,"style":dividend_style,"high_priority":dividend_high,"missing_growth_neutral":dividend_growth_missing_neutral},
         "result_access":{"user_id":"SESSION","access_code":"SESSION"},
         "server":{"order_number":f"APB-{datetime.now().strftime('%Y%m%d-%H%M%S')}","status":"built"},
     }
@@ -16729,6 +16790,44 @@ def _compact_result_dataframe(df, hide_index=True, max_height=None):
         kwargs["height"]=max_height
     st.dataframe(df,**kwargs)
 
+def _stock_explanation_lines(p, original):
+    """Deterministic explanation built only from the same cached inputs used by APB."""
+    base=_safe(p.get("base_1y_pct"),0.0)
+    stock=p.get("stock_score")
+    quality=p.get("quality_score")
+    roic=p.get("roic_pct"); rev=p.get("revenue_growth_3y_pct"); fcf=p.get("fcf_growth_3y_pct"); pe=p.get("pe")
+    positives=[]; tradeoffs=[]
+    if base >= 20: positives.append(f"analyst Base 1Y is {base:.1f}%")
+    elif base < 5: tradeoffs.append(f"analyst Base 1Y is only {base:.1f}%")
+    if stock is not None and stock >= 70: positives.append(f"APB stock score is {float(stock):.0f}/100")
+    elif stock is not None and stock < 50: tradeoffs.append(f"APB stock score is {float(stock):.0f}/100")
+    if quality is not None and quality >= 70: positives.append(f"quality score is {float(quality):.0f}/100")
+    why=("; ".join(positives[:3]) if positives else "it provided the best portfolio-level fit among the available candidates")
+    why_text=f"Selected through APB's portfolio optimisation because {why}."
+    if tradeoffs: why_text += " Trade-off: " + "; ".join(tradeoffs[:2]) + "."
+
+    fundamentals=[]
+    if roic is not None: fundamentals.append(f"ROIC {float(roic):.1f}%")
+    if rev is not None: fundamentals.append(f"Revenue growth {float(rev):.1f}%")
+    if fcf is not None: fundamentals.append(f"FCF growth {float(fcf):.1f}%")
+    if pe is not None: fundamentals.append(f"P/E {float(pe):.1f}")
+    fundamental_text=", ".join(fundamentals) if fundamentals else "No additional fundamental metrics were available in today's cache."
+
+    analyst=f"Bear/Base/Bull 1Y: {_pct(p.get('bear_1y_pct'),1)} / {_pct(p.get('base_1y_pct'),1)} / {_pct(p.get('bull_1y_pct'),1)}."
+    div=(original.get("dividend",{}) or {})
+    dividend_text=None
+    if div.get("enabled"):
+        style=str(div.get("style","Balanced"))
+        y=p.get("dividend_yield_pct"); g=p.get("dividend_growth_yoy_pct"); yrs=p.get("continuous_dividend_growth_years")
+        parts=[f"Style: {style}"]
+        if y is not None: parts.append(f"current yield {float(y):.2f}%")
+        if g is not None: parts.append(f"DPS growth {float(g):.1f}% YoY")
+        if yrs is not None: parts.append(f"dividend increased for {int(round(float(yrs)))} consecutive years")
+        dividend_text="; ".join(parts)+"."
+    role=f"{_display_structure(p.get('structure_layer'))} · {_display_sector(p.get('sector'))} · {p.get('country_region') or 'Unknown region'}."
+    return why_text, fundamental_text, analyst, dividend_text, role
+
+
 def show_result(result):
     portfolio=result.get("portfolio",{}); phase2=result.get("phase2",{}); phase3=result.get("phase3",{}); positions=phase2.get("positions",[]); ccy=portfolio.get("currency","DKK")
     st.success("Portfolio built successfully.")
@@ -16768,6 +16867,20 @@ def show_result(result):
     for position_no,p in enumerate(sorted_positions,start=1):
         rows.append({"#":position_no,"Name":p.get("name"),"Ticker":p.get("ticker"),"Exchange":p.get("exchange"),"Shares":_fmt(p.get("shares"),0),"Value":f"{_money(p.get('position_value'))} {ccy}","%PF":_pct(p.get("portfolio_weight_pct"),1),"Structure":_display_structure(p.get("structure_layer")),"Sector":_display_sector(p.get("sector")),"Dividend %":_pct(p.get("dividend_yield_pct"),2),"Bear 1Y":_pct(p.get("bear_1y_pct"),1),"Base 1Y":_pct(p.get("base_1y_pct"),1),"Bull 1Y":_pct(p.get("bull_1y_pct"),1)})
     st.dataframe(pd.DataFrame(rows),use_container_width=True,height=38+35*max(1,len(rows)),hide_index=True)
+
+    st.subheader("Why APB selected these stocks")
+    st.caption("These explanations are deterministic: they are generated from the same cached metrics and portfolio settings used by the engine, not from generated analyst commentary.")
+    original=result.get("original_input",{}) or {}
+    for p in sorted_positions:
+        with st.expander(f"{p.get('name') or p.get('ticker')} ({p.get('ticker')}) — Why selected"):
+            why_text,fundamental_text,analyst_text,dividend_text,role_text=_stock_explanation_lines(p,original)
+            st.markdown(f"**Why selected:** {why_text}")
+            st.markdown(f"**Fundamentals:** {fundamental_text}")
+            st.markdown(f"**Analyst view:** {analyst_text}")
+            if dividend_text:
+                st.markdown(f"**Dividend:** {dividend_text}")
+            st.markdown(f"**Portfolio role:** {role_text}")
+
     tabs=st.tabs(["Structure","Sectors","Regions","Input / Results"])
     explanations={
         "structure_layers":"Structure layers are the portfolio's risk architecture. The target mix is especially important because it determines how much of the portfolio is allocated to lower- versus higher-risk company profiles.",
@@ -16797,6 +16910,7 @@ def show_result(result):
             {"Setting":"Number of different stocks","Value":_fmt(basic.get("maximum_number_of_stocks"),0)},
             {"Setting":"Minimum stocks per sector","Value":_fmt(basic.get("minimum_stocks_per_sector"),0)},
             {"Setting":"Dividend preference","Value":("On" if (original.get("dividend",{}) or {}).get("enabled") else "Off")},
+            {"Setting":"Dividend style","Value":str((original.get("dividend",{}) or {}).get("style","Balanced")) if (original.get("dividend",{}) or {}).get("enabled") else "–"},
             {"Setting":"Dividend target","Value":(_pct((original.get("dividend",{}) or {}).get("target_pct"),1) if (original.get("dividend",{}) or {}).get("enabled") else "–")},
             {"Setting":"Dividend priority","Value":("High" if (original.get("dividend",{}) or {}).get("high_priority") else "Normal") if (original.get("dividend",{}) or {}).get("enabled") else "–"},
         ]
@@ -17182,6 +17296,10 @@ def render_builder():
         st.session_state["dividend_high_priority"]=True
     if "dividend_target_pct" not in st.session_state:
         st.session_state["dividend_target_pct"]=3.0
+    if "dividend_style" not in st.session_state:
+        st.session_state["dividend_style"]="Balanced"
+    if "dividend_growth_missing_neutral" not in st.session_state:
+        st.session_state["dividend_growth_missing_neutral"]=True
     if "dividend_target_slider" not in st.session_state:
         st.session_state["dividend_target_slider"]=float(st.session_state.get("dividend_target_pct",3.0))
     dividend_heading=f"Dividend | {'On' if st.session_state.get('dividend_enabled',False) else 'Off'}"
@@ -17193,6 +17311,25 @@ def render_builder():
         st.checkbox(
             "High priority",key="dividend_high_priority",disabled=not dividend_on,
             help="Default is High priority. Switch this off if dividend should influence the build more gently.",
+            on_change=_keep_dividend_open_once,
+        )
+        st.selectbox(
+            "Dividend style",["Income","Balanced","Dividend Growth"],key="dividend_style",disabled=not dividend_on,
+            help="Income prioritizes current yield. Balanced combines current yield, dividend growth and consistency. Dividend Growth prioritizes companies that raise dividends, even when current yield is low.",
+            on_change=_keep_dividend_open_once,
+        )
+        style_now=str(st.session_state.get("dividend_style","Balanced"))
+        style_text={
+            "Income":"Prioritizes higher current dividend income.",
+            "Balanced":"Balances current yield with dividend growth and a consistent history of increases.",
+            "Dividend Growth":"Prioritizes dividend growth and consecutive years of increases, even when current yield is relatively low.",
+        }.get(style_now,"")
+        st.caption(style_text)
+        st.checkbox(
+            "Do not penalize missing dividend growth data",
+            key="dividend_growth_missing_neutral",
+            disabled=not dividend_on or style_now=="Income",
+            help="When Dividend Growth YoY or Dividend Growth Years is unavailable, APB evaluates the stock using the available dividend data instead of treating the missing growth data as zero. Current dividend yield is unaffected.",
             on_change=_keep_dividend_open_once,
         )
         st.number_input(
